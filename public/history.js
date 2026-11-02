@@ -2,7 +2,7 @@ import { FIGS } from './logic.js';
 
 const COLORS = { yellow: 'var(--yellow)', blue: 'var(--blue)', orange: 'var(--orange)', purple: 'var(--purple)' };
 const CATS = [
-  { k: 'mid', n: '中途', c: 'var(--c-mid)' }, { k: 'rail', n: '铁路', c: 'var(--c-rail)' },
+  { k: 'mid', n: '行动分', c: 'var(--c-mid)' }, { k: 'rail', n: '铁路', c: 'var(--c-rail)' },
   { k: 'ind', n: '产业', c: 'var(--c-ind)' }, { k: 'jewel', n: '明珠', c: 'var(--c-jewel)' }
 ];
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

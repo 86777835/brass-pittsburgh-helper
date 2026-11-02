@@ -195,7 +195,7 @@ export function results(S) {
     { k: 'mvp', ch: '冠', name: '工业大亨', desc: '最终排名第一', who: sorted.filter(r => r.place === 1).map(r => r.id) },
     { k: 'rail', ch: '路', name: '铁路之王', desc: '火车链接得分最高', who: best(r => r.rail) },
     { k: 'ind', ch: '业', name: '实业巨擘', desc: '产业板块得分最高', who: best(r => r.ind) },
-    { k: 'mid', ch: '抢', name: '中途抢分', desc: '游戏过程中得分最高', who: best(r => r.mid) },
+    { k: 'mid', ch: '行', name: '行动派', desc: '行动分（时代计分之外的得分）最高', who: best(r => r.mid) },
     { k: 'jewel', ch: '珠', name: '明珠在握', desc: '皇冠明珠额外得分最高', who: best(r => r.jewel) },
     { k: 'thrift', ch: '俭', name: '精打细算', desc: '全局花钱最少', who: played ? best(r => -r.spent, { min: -Infinity }) : [] },
     { k: 'big', ch: '豪', name: '挥金如土', desc: '全局花钱最多', who: played ? best(r => r.spent) : [] },
