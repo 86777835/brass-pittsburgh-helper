@@ -134,16 +134,22 @@ function landing() {
       <button class="card lobby" data-act="rejoin" data-code="${r.code}" data-k="lb-${r.code}">
         <span class="lc">${r.code}</span>
         <span class="lp">${r.players.map(p => `<span class="por xs" style="--c:${COLORS[p.id]}"><img src="img/${p.fig}.jpg" alt=""></span>`).join('')}</span>
-        <span class="ls"><b>${stageText(r)}</b>${r.online} 人在线</span>
-      </button>`).join('') : '<div class="empty">暂无</div>';
-  return `${hero()}<div class="wrap" data-k="landing">
-    <a class="card guide-entry" href="guide"><span class="gt"><img src="img/rules-poster.jpg" alt=""></span>
-      <span class="gx"><b>新手教程</b>9 分钟视频 + 图文</span><span class="ga">›</span></a>
-    <button class="btn" data-act="create" ${ui.busy ? 'disabled' : ''}>创建新房间</button>
-    <div class="join"><input id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="房间码"><button class="btn navy" data-act="join">加入</button></div>
-    <div class="err">${esc(ui.err)}</div>
-    <a class="btn ghost" href="history">往期对局记录</a>
-    <h2 class="h">正在进行的房间</h2>
+        <span class="ls"><b class="st st-${r.stage}">${stageText(r)}</b><small><i class="od${r.online ? ' on' : ''}"></i>${r.online} 人在线</small></span>
+      </button>`).join('') : '<div class="empty">暂无进行中的房间</div>';
+  return `<div class="hero-art" data-k="hero"><img src="img/hero.jpg" alt=""><div class="ht">
+      <div class="wm">BRASS</div><div class="hr"></div><div class="hz">工业革命：匹兹堡</div><div class="hs">顺位与计分助手</div></div></div>
+    <div class="wrap" data-k="landing">
+    <div class="card start">
+      <button class="btn" data-act="create" ${ui.busy ? 'disabled' : ''}>创建新房间</button>
+      <div class="or">或输入房间码加入</div>
+      <div class="join"><input id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="房间码"><button class="btn navy" data-act="join">加入</button></div>
+      ${ui.err ? `<div class="err">${esc(ui.err)}</div>` : ''}
+    </div>
+    <div class="tiles">
+      <a class="card tile" href="guide"><span class="ti play"><img src="img/rules-poster.jpg" alt=""></span><span><b>新手教程</b>视频 + 图文</span></a>
+      <a class="card tile" href="history"><span class="ti rec">录</span><span><b>往期对局</b>战绩查询</span></a>
+    </div>
+    <h2 class="h">正在进行<small>${rooms && rooms.length ? `${rooms.length} 个房间` : ''}</small></h2>
     <div class="list">${roomList}</div>
     <footer>非官方玩家工具</footer></div>`;
 }

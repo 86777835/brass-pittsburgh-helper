@@ -212,15 +212,40 @@ a.btn.ghost{line-height:35px}
 .gs img{display:block;width:100%;height:auto;background:var(--steel)}
 .gs ul{margin:10px 14px 0 30px;font:500 14.5px/1.7 var(--sans)}
 .gs li+li{margin-top:5px}
-.guide-entry{display:flex;align-items:center;gap:12px;margin-top:14px;padding:8px 12px 8px 8px;text-decoration:none;color:#f3ead6;
-  background:linear-gradient(180deg,var(--navy2),var(--navy));border-color:#1a2d4d;box-shadow:0 3px 0 #13213a}
-.guide-entry:active{transform:translateY(2px);box-shadow:0 1px 0 #13213a}
-.guide-entry .gt{position:relative;flex:none;width:96px;height:54px;border-radius:5px;overflow:hidden;border:1.5px solid var(--brass2)}
-.guide-entry .gt img{display:block;width:100%;height:100%;object-fit:cover}
-.guide-entry .gt:after{content:"";position:absolute;left:50%;top:50%;width:0;height:0;margin:-9px 0 0 -5px;border-style:solid;border-width:9px 0 9px 14px;border-color:transparent transparent transparent #fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
-.guide-entry .gx{flex:1;font-size:12.5px;color:#cfd8e6}
-.guide-entry .gx b{display:block;margin-bottom:2px;font:900 19px var(--serif);letter-spacing:3px;color:var(--brass2)}
-.guide-entry .ga{font:300 34px/1 var(--sans);color:var(--brass2)}
+/* landing */
+.hero-art{position:relative;height:calc(env(safe-area-inset-top) + 232px);overflow:hidden;background:var(--steel);border-bottom:3px solid var(--brass)}
+.hero-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 40%}
+.hero-art:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,14,10,.25) 0,rgba(18,14,10,0) 30%,rgba(18,14,10,.15) 50%,rgba(18,14,10,.78) 100%)}
+.hero-art .ht{position:absolute;z-index:1;left:0;right:0;bottom:16px;text-align:center;color:#fbf6ec;text-shadow:0 2px 12px rgba(0,0,0,.6)}
+.hero-art .wm{font:500 46px/1 "Cinzel",serif;letter-spacing:14px;text-indent:14px}
+.hero-art .hr{width:210px;height:1px;margin:9px auto 8px;background:rgba(251,246,236,.75)}
+.hero-art .hz{font:600 18px var(--serif);letter-spacing:6px;text-indent:6px}
+.hero-art .hs{margin-top:5px;font:600 12px var(--sans);letter-spacing:5px;text-indent:5px;color:var(--brass2)}
+.start{margin-top:14px;padding:12px}
+.start .btn{margin-top:0}
+.start .or{display:flex;align-items:center;gap:10px;margin:12px 2px 0;font-size:12px;color:var(--ink2)}
+.start .or:before,.start .or:after{content:"";flex:1;height:1px;background:rgba(90,74,56,.28)}
+.start .join{margin-top:8px}
+.start .join input,.start .join .btn{height:46px}
+.start .join .btn{width:96px}
+.start .err{margin-top:8px;min-height:0}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.tile{display:flex;align-items:center;gap:10px;padding:10px;text-decoration:none;color:var(--ink2);font-size:11.5px;line-height:1.4}
+.tile:active{transform:translateY(1px)}
+.tile b{display:block;font:900 16px var(--serif);letter-spacing:2px;color:var(--navy)}
+.tile .ti{position:relative;flex:none;width:42px;height:42px;border-radius:50%;overflow:hidden;border:2px solid var(--brass);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.tile .ti img{display:block;width:100%;height:100%;object-fit:cover}
+.tile .ti.play:after{content:"";position:absolute;left:50%;top:50%;margin:-7px 0 0 -4px;border-style:solid;border-width:7px 0 7px 11px;border-color:transparent transparent transparent #fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
+.tile .ti.rec{display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,var(--navy2),var(--navy));color:var(--brass2);font:900 18px var(--serif)}
+.lobby .lp .por+.por{margin-left:-7px}
+.lobby .ls{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.lobby .ls .st{display:inline-block;padding:2px 8px;border-radius:10px;font:700 12px var(--sans)}
+.lobby .ls .st-setup{background:rgba(181,139,60,.2);color:#7a5a1c}
+.lobby .ls .st-play{background:rgba(38,64,106,.13);color:var(--navy)}
+.lobby .ls .st-over{background:rgba(90,74,56,.12);color:var(--ink2)}
+.lobby .ls small{font-size:11px;color:var(--ink2)}
+.od{display:inline-block;width:7px;height:7px;margin-right:4px;border-radius:50%;background:#a59a86;vertical-align:1px}
+.od.on{background:#4caf6a}
 
 /* past games (history.html) */
 .games{margin-top:12px}
@@ -238,3 +263,5 @@ a.btn.ghost{line-height:35px}
 .game .gd{border-top:1px dashed rgba(90,74,56,.35);padding:4px 0}
 .game[open] summary .gp{display:none}
 #search input{font:500 15px var(--sans);letter-spacing:0;text-transform:none;text-align:left;padding:0 12px}
+.start .join input::placeholder{font:500 15px var(--sans);letter-spacing:6px;color:#a59a86}
+.tile .ti.play img{object-position:80% 50%}
