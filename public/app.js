@@ -142,7 +142,7 @@ function landing() {
     <button class="btn" data-act="create" ${ui.busy ? 'disabled' : ''}>创建新房间</button>
     <div class="join"><input id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="房间码"><button class="btn navy" data-act="join">加入</button></div>
     <div class="err">${esc(ui.err)}</div>
-    <a class="btn ghost" href="guide">新手教程（图文）</a>
+    <a class="btn ghost" href="guide">新手教程</a>
     <footer>非官方玩家工具</footer></div>`;
 }
 

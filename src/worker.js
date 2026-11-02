@@ -25,9 +25,29 @@ export default {
       return env.ROOM.get(env.ROOM.idFromName(m[1])).fetch(req);
     }
 
+    const media = url.pathname.match(/^\/media\/([\w.-]+)$/);
+    if (media && req.method === 'GET') return serveMedia(env, media[1], req);
+
     return new Response('Not found', { status: 404 });
   }
 };
+
+// Files in the R2 bucket (the rules video). Honors Range so phones can seek.
+async function serveMedia(env, key, req) {
+  const obj = await env.MEDIA.get(key, { range: req.headers, onlyIf: req.headers });
+  if (!obj) return new Response('Not found', { status: 404 });
+  const h = new Headers();
+  obj.writeHttpMetadata(h);
+  h.set('etag', obj.httpEtag);
+  h.set('accept-ranges', 'bytes');
+  if (!('body' in obj)) return new Response(null, { status: 304, headers: h });
+  if (!req.headers.has('range') || !obj.range) return new Response(obj.body, { headers: h });
+  const r = obj.range;
+  const start = r.suffix != null ? obj.size - r.suffix : r.offset ?? 0;
+  const len = r.suffix != null ? r.suffix : r.length ?? obj.size - start;
+  h.set('content-range', `bytes ${start}-${start + len - 1}/${obj.size}`);
+  return new Response(obj.body, { status: 206, headers: h });
+}
 
 const lobby = env => env.LOBBY.get(env.LOBBY.idFromName('lobby'));
 const LIST_AFTER_IDLE_MS = 30 * 60 * 1000;   // an empty room stays listed this long after its last activity
