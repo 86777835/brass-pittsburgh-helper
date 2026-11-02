@@ -1,4 +1,4 @@
-import { ROUNDS_PER_ERA, SETTLE_COOLDOWN_MS, COLOR_ORDER, COLOR_ZH, FIGS, num, eraParts, results } from './logic.js';
+import { ROUNDS_PER_ERA, SETTLE_COOLDOWN_MS, COLOR_ORDER, COLOR_ZH, COLOR_FIGS, FIGS, num, eraParts, results } from './logic.js';
 
 const COLORS = { yellow: 'var(--yellow)', blue: 'var(--blue)', orange: 'var(--orange)', purple: 'var(--purple)' };
 const CATS = [
@@ -56,7 +56,9 @@ function connect() {
         ui.justSettled = Date.now(); clearTimeout(ui.lockTimer);
         ui.lockTimer = setTimeout(render, SETTLE_COOLDOWN_MS + 50);
       }
+      const drew = S && (m.state.draw || 0) > (S.draw || 0);
       S = m.state; syncDraft(); store.set('pgh-last', code); render();
+      if (drew) playDraw();
     }
     else if (m.type === 'error' && m.error === 'noroom') { noRoom = true; ws.close(); render(); }
   };
@@ -280,6 +282,31 @@ function mvpTab() {
         <div class="aw">${a.who.map(id => por(id, 'xs')).join('')}${a.who.length === 1 ? `<span class="fg" style="align-self:center;margin-left:3px">${esc(pname(a.who[0]))}</span>` : ''}</div></div></div>`).join('')}</div>`;
 }
 
+/* ---------- blind-bag draw (plays on every phone when someone shuffles) ---------- */
+const BAG_SVG = `<svg viewBox="0 0 120 130" width="120" height="130" aria-hidden="true">
+  <path d="M40 34C26 50 10 66 10 94c0 24 20 32 50 32s50-8 50-32c0-28-16-44-30-60z" fill="#7b5a36"/>
+  <path d="M40 34C26 50 10 66 10 94c0 24 20 32 50 32" fill="none" stroke="#5c4127" stroke-width="3" stroke-dasharray="5 4"/>
+  <path d="M42 30 32 8l14 9 6-13 8 12 8-12 6 13 14-9-10 22z" fill="#8c6a42"/><path d="M38 33h44l-3 8H41z" fill="#4e3620"/>
+  <circle cx="60" cy="88" r="17" fill="none" stroke="#e0c27a" stroke-width="3"/>
+  <text x="60" y="95" text-anchor="middle" font-family="Cinzel,serif" font-size="20" fill="#e0c27a">B</text></svg>`;
+const DRAW_START_MS = 1100, DRAW_STEP_MS = 650, DRAW_HOLD_MS = 1300;
+function playDraw() {
+  const seated = S.players.slice(0, S.n);
+  document.getElementById('draw')?.remove();
+  const el = document.createElement('div');
+  el.id = 'draw'; el.className = 'draw';
+  el.style.setProperty('--start', DRAW_START_MS + 'ms'); el.style.setProperty('--step', DRAW_STEP_MS + 'ms');
+  el.innerHTML = `<div class="dr-box"><div class="dr-t">盲抽顺位</div>
+    <div class="dr-slots">${seated.map((p, i) => `<div class="dr-s" style="--d:${(seated.length - 1) / 2 - i};--i:${i}">
+      <span class="por" style="--c:${COLORS[p.id]}"><img src="img/${p.fig}.jpg" alt=""></span><b>${i + 1}</b><i>${esc(p.name || FIGS[p.fig])}</i></div>`).join('')}</div>
+    <div class="dr-bag">${BAG_SVG}</div><div class="dr-skip">点击任意处跳过</div></div>`;
+  el.addEventListener('click', () => el.remove());
+  document.body.appendChild(el);
+  const end = DRAW_START_MS + seated.length * DRAW_STEP_MS + DRAW_HOLD_MS;
+  setTimeout(() => el.classList.add('out'), end);
+  setTimeout(() => el.remove(), end + 400);
+}
+
 /* ---------- sheets ---------- */
 function sheetView() {
   const s = ui.sheet;
@@ -287,7 +314,7 @@ function sheetView() {
     const me = S.players[s.i];
     const taken = S.players.slice(0, S.n).filter(p => p !== me).map(p => p.fig);
     return `<div class="mask" data-act="close"></div><div class="sheet"><h3>选择角色</h3>
-      <div class="figs">${Object.entries(FIGS).map(([k, n]) => `<button data-act="pick" data-fig="${k}" class="${k === me.fig ? 'on' : ''}" ${taken.includes(k) ? 'disabled' : ''}><span class="por" style="--c:${COLORS[me.id]}"><img src="img/${k}.jpg" alt=""></span>${n}</button>`).join('')}</div>
+      <div class="figs">${COLOR_FIGS[me.id].map(k => [k, FIGS[k]]).map(([k, n]) => `<button data-act="pick" data-fig="${k}" class="${k === me.fig ? 'on' : ''}" ${taken.includes(k) ? 'disabled' : ''}><span class="por" style="--c:${COLORS[me.id]}"><img src="img/${k}.jpg" alt=""></span>${n}</button>`).join('')}</div>
       <button class="btn ghost" data-act="close">关闭</button></div>`;
   }
   const f = FIELD[s.key];
@@ -354,8 +381,9 @@ function leave() {
 }
 async function share() {
   const url = `${location.origin}/?r=${code}`;
-  if (navigator.share) { try { await navigator.share({ title: '工业革命：匹兹堡 · 房间 ' + code, url }); return; } catch (e) { if (e.name === 'AbortError') return; } }
-  try { await navigator.clipboard.writeText(url); toast('房间链接已复制'); } catch { toast('房间码 ' + code); }
+  const text = `《工业革命：匹兹堡》顺位与计分助手\n邀请你加入房间 ${code}，点开链接即可和大家同步顺位与计分（无需下载）：`;
+  if (navigator.share) { try { await navigator.share({ title: '工业革命：匹兹堡 · 房间 ' + code, text, url }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  try { await navigator.clipboard.writeText(`${text}\n${url}`); toast('邀请已复制，发给朋友即可'); } catch { toast('房间码 ' + code); }
 }
 function settle() {
   for (const id of S.order) {

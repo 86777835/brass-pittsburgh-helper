@@ -11,6 +11,14 @@ export const FIGS = {
 };
 // Faces shown on the character tiles in the rulebook's setup pictures.
 export const DEFAULT_FIG = { yellow: 'bly', blue: 'tesla', orange: 'carnegie', purple: 'rockefeller' };
+// Characters each color's tile can show (a tile is double-sided). The rulebook shows yellow Bly, orange Carnegie,
+// purple Rockefeller and both blue sides (Tesla, Walker), but not which of Frick, Morgan and Bissell is on the back
+// of yellow, orange and purple, so those three are allowed on any of those colors until confirmed.
+const UNCONFIRMED_BACKS = ['frick', 'morgan', 'bissell'];
+export const COLOR_FIGS = {
+  yellow: ['bly', ...UNCONFIRMED_BACKS], blue: ['tesla', 'walker'],
+  orange: ['carnegie', ...UNCONFIRMED_BACKS], purple: ['rockefeller', ...UNCONFIRMED_BACKS]
+};
 // Score fields per era. rail/ind are lists of per-link / per-tile values; the rest are single numbers.
 export const LIST_KEYS = ['rail', 'ind'];
 export const ERA_KEYS = { 1: ['pre', 'rail', 'ind', 'alt'], 2: ['pre', 'rail', 'ind', 'alt', 'loco', 'inc', 'cash'] };
@@ -52,13 +60,14 @@ export function reduce(s, a) {
       const p = S.players[a.i]; if (!p || a.i >= S.n) return null;
       if (a.name !== undefined) p.name = cleanText(a.name, 12).trim();
       if (a.fig !== undefined) {
-        if (!FIGS[a.fig] || seated(S).some(o => o !== p && o.fig === a.fig)) return null;
+        if (!COLOR_FIGS[p.id].includes(a.fig) || seated(S).some(o => o !== p && o.fig === a.fig)) return null;
         p.fig = a.fig;
       }
       if (a.color !== undefined) {
         const other = S.players.find(o => o.id === a.color);
         if (!other || (other !== p && S.players.indexOf(other) < S.n)) return null;
         other.id = p.id; p.id = a.color;
+        [other.fig, p.fig] = [p.fig, other.fig];   // the character tile goes with its color
       }
       return done();
     }
@@ -74,6 +83,7 @@ export function reduce(s, a) {
       if (S.stage !== 'setup') return null;
       const a2 = S.players;
       for (let i = S.n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a2[i], a2[j]] = [a2[j], a2[i]]; }
+      S.draw = (s.draw || 0) + 1;   // tells every phone to play the blind-bag draw
       return done();
     }
 
