@@ -79,7 +79,8 @@ export function reduce(s, a) {
 
     case 'start':
       if (S.stage !== 'setup') return null;
-      Object.assign(S, { stage: 'play', order: seated(S).map(p => p.id), era: 1, round: 1, spent: {}, history: [], last: null, prev: null, score: { 1: {}, 2: {} } });
+      Object.assign(S, { stage: 'play', gid: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),   // names this game in the archive
+        order: seated(S).map(p => p.id), era: 1, round: 1, spent: {}, history: [], last: null, prev: null, score: { 1: {}, 2: {} } });
       return done();
 
     case 'settle': {
@@ -123,6 +124,19 @@ export function reduce(s, a) {
       return done();
   }
   return null;
+}
+
+// What the archive keeps for a finished game: standings and score breakdown. Null while a score field is invalid.
+export function gameRecord(S) {
+  const R = results(S);
+  if (R.error) return null;
+  return {
+    gid: S.gid, rounds: S.history.length,
+    players: R.rows.map(r => {
+      const p = S.players.find(x => x.id === r.id);
+      return { id: r.id, fig: p.fig, name: p.name, place: r.place, total: r.total, inc: r.inc, cash: r.cash, mid: r.mid, rail: r.rail, ind: r.ind, jewel: r.jewel };
+    })
+  };
 }
 
 /* ---------- scoring ---------- */

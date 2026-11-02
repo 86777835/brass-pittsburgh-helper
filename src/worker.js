@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { initialState, reduce } from '../public/logic.js';
+import { initialState, reduce, gameRecord, FIGS } from '../public/logic.js';
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O, 1/I/L
 const newCode = () => Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
@@ -18,6 +18,7 @@ export default {
     }
 
     if (url.pathname === '/api/rooms' && req.method === 'GET') return lobby(env).fetch('https://lobby/list');
+    if (url.pathname === '/api/games' && req.method === 'GET') return archive(env).fetch('https://archive/list' + url.search);
 
     const m = url.pathname.match(/^\/api\/room\/([A-Z0-9]{4})\/ws$/);
     if (m) {
@@ -50,6 +51,7 @@ async function serveMedia(env, key, req) {
 }
 
 const lobby = env => env.LOBBY.get(env.LOBBY.idFromName('lobby'));
+const archive = env => env.ARCHIVE.get(env.ARCHIVE.idFromName('archive'));
 const LIST_AFTER_IDLE_MS = 30 * 60 * 1000;   // an empty room stays listed this long after its last activity
 const LIST_MAX_MS = 12 * 3600 * 1000;
 
@@ -65,6 +67,29 @@ export class Lobby extends DurableObject {
     await this.ctx.storage.put('rooms', rooms);
     if (req.method === 'POST') return new Response('ok');
     return Response.json(Object.values(rooms).sort((a, b) => b.online - a.online || b.updated - a.updated).slice(0, 30));
+  }
+}
+
+// Archive: one Durable Object holding every finished game, keyed by game id (ids start with the start time, so key order = newest last).
+export class Archive extends DurableObject {
+  async fetch(req) {
+    const url = new URL(req.url);
+    if (url.pathname === '/put') {
+      const r = await req.json(), key = 'g:' + r.gid;
+      const old = await this.ctx.storage.get(key);
+      await this.ctx.storage.put(key, { ...r, ended: old?.ended ?? Date.now() });
+      return new Response('ok');
+    }
+    if (url.pathname === '/del') { await this.ctx.storage.delete('g:' + await req.text()); return new Response('ok'); }
+    // list: newest first, optionally filtered by room code, player name or character name; searches the latest 1000 games
+    const q = (url.searchParams.get('q') || '').trim().toLowerCase();
+    const all = await this.ctx.storage.list({ prefix: 'g:', reverse: true, limit: 1000 });
+    const out = [];
+    for (const g of all.values()) {
+      if (!q || g.code.toLowerCase() === q || g.players.some(p => p.name.toLowerCase().includes(q) || FIGS[p.fig].includes(q))) out.push(g);
+      if (out.length >= 50) break;
+    }
+    return Response.json(out);
   }
 }
 
@@ -102,16 +127,30 @@ export class Room extends DurableObject {
     let action; try { ({ action } = JSON.parse(msg)); } catch { return; }
     const next = reduce(this.s, action);
     if (!next) { ws.send(JSON.stringify({ type: 'state', state: this.view() })); return; }  // rejected: resync sender
+    const before = this.s;
     this.s = next;
     await this.ctx.storage.put('s', next);
     const out = JSON.stringify({ type: 'state', state: this.view() });
     for (const w of this.ctx.getWebSockets()) { try { w.send(out); } catch {} }
+    await this.record(before, action);
     await this.report();
   }
 
   async webSocketClose(ws, code) {
     try { ws.close(code, 'closed'); } catch {}
     if (this.s) await this.report(ws);
+  }
+
+  // Keep the archive in step with a finished game: update it on every change while the game is over,
+  // and drop it when the final settle is undone. Games started before game ids existed are not archived.
+  async record(before, action) {
+    const s = this.s;
+    if (s.stage === 'over' && s.gid) {
+      const rec = gameRecord(s);
+      if (rec) await archive(this.env).fetch('https://archive/put', { method: 'POST', body: JSON.stringify({ ...rec, code: this.code }) });
+    } else if (before.stage === 'over' && action.t === 'undo' && before.gid) {
+      await archive(this.env).fetch('https://archive/del', { method: 'POST', body: before.gid });
+    }
   }
 
   // Tell the lobby who is here and how far the game is.
