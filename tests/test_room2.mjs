@@ -53,10 +53,10 @@ eq('names synced to B', await Promise.all([0, 1, 2, 3].map(i => B.inputValue(`[d
 await B.click('[data-act="fig"][data-i="1"]'); await wait(200);
 eq('blue picker offers only its two sides', await B.$$eval('[data-act="pick"]', b => b.map(x => x.dataset.fig)), ['tesla', 'walker']);
 await B.click('.sheet [data-act="close"]');
-await C.click('[data-act="fig"][data-i="0"]'); await C.click('[data-act="pick"][data-fig="frick"]'); await wait(400);
-await B.click('[data-act="fig"][data-i="2"]'); await wait(200);
-eq('taken figure disabled in picker', await B.isDisabled('[data-act="pick"][data-fig="frick"]'), true);
-await B.click('.sheet [data-act="close"]');
+await C.click('[data-act="fig"][data-i="0"]');
+eq('purple picker offers only its two sides', await C.$$eval('[data-act="pick"]', b => b.map(x => x.dataset.fig)), ['rockefeller', 'morgan']);
+await C.click('[data-act="pick"][data-fig="morgan"]'); await wait(400);
+eq('flipped tile synced to A', await A.getAttribute('[data-act="fig"][data-i="0"] img', 'src'), 'img/morgan.jpg');
 await shot(A, '01_setup4_se');
 await C.click('[data-act="start"]'); await A.waitForSelector('.status'); await wait(400);
 const seatIds = (await A.$$eval('.slot', s => s.map(x => x.dataset.k.slice(5))));

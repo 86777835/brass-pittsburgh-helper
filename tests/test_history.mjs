@@ -36,8 +36,8 @@ await send({ t: 'score', era: 1, id: p1, key: 'pre', value: '40' });
 await send({ t: 'score', era: 2, id: p1, key: 'pre', value: '90' });
 await send({ t: 'score', era: 2, id: p1, key: 'rail', value: [3, 4] });
 await send({ t: 'score', era: 2, id: p2, key: 'pre', value: '70' });
-await wait(400);
-let g = (await games(code))[0];
+let g;
+for (let i = 0; i < 20 && !(g?.players[0].total === 97 && g?.players[1].total === 70); i++) { await wait(300); g = (await games(code))[0]; }   // archive write lands after the broadcast
 eq('archived by room code', g?.code, code);
 eq('winner first', [g?.players[0].name, g?.players[0].total, g?.players[0].place], [name, 97, 1]);
 eq('runner-up', [g?.players[1].name, g?.players[1].total], ['对手', 70]);

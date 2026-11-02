@@ -11,13 +11,10 @@ export const FIGS = {
 };
 // Faces shown on the character tiles in the rulebook's setup pictures.
 export const DEFAULT_FIG = { yellow: 'bly', blue: 'tesla', orange: 'carnegie', purple: 'rockefeller' };
-// Characters each color's tile can show (a tile is double-sided). The rulebook shows yellow Bly, orange Carnegie,
-// purple Rockefeller and both blue sides (Tesla, Walker), but not which of Frick, Morgan and Bissell is on the back
-// of yellow, orange and purple, so those three are allowed on any of those colors until confirmed.
-const UNCONFIRMED_BACKS = ['frick', 'morgan', 'bissell'];
+// The two sides of each color's character tile (checked against the physical tiles).
 export const COLOR_FIGS = {
-  yellow: ['bly', ...UNCONFIRMED_BACKS], blue: ['tesla', 'walker'],
-  orange: ['carnegie', ...UNCONFIRMED_BACKS], purple: ['rockefeller', ...UNCONFIRMED_BACKS]
+  yellow: ['bly', 'frick'], blue: ['tesla', 'walker'],
+  orange: ['carnegie', 'bissell'], purple: ['rockefeller', 'morgan']
 };
 // Score fields per era. rail/ind are lists of per-link / per-tile values; the rest are single numbers.
 export const LIST_KEYS = ['rail', 'ind'];
