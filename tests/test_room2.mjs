@@ -129,6 +129,8 @@ await fillCell(B, 2, p3, 'pre', ['6', '0']); await fillCell(B, 2, p4, 'pre', ['2
 await shot(B, '04_score_era2');
 await A.click('[data-act="tab"][data-tab="mvp"]'); await wait(600);
 eq('tie shows joint first', (await A.textContent('.mvp .crown')).replace(/\s/g, ''), '并列第一');
+eq('tie-break collapsed at first', await A.$$eval('[data-k^="tb-"]', r => r.length), 0);
+await A.click('[data-act="tb"]'); await wait(200);
 eq('tie-break inputs for both', await A.$$eval('[data-k^="tb-"]', r => r.length), 2);
 await shot(A, '05_mvp_tie_se');
 await A.fill(`[data-sc="2:${p2}:inc"]`, '7'); await A.fill(`[data-sc="2:${p1}:inc"]`, '3'); await A.press(`[data-sc="2:${p1}:inc"]`, 'Enter'); await wait(1200);

@@ -24,7 +24,7 @@ const store = {
 
 let code = cleanCode(new URLSearchParams(location.search).get('r'));
 let S = null, noRoom = false, online = false, ws = null, queue = [], retry = 0;
-const ui = { tab: store.get('pgh-tab') || 'order', era: null, sheet: null, err: '', busy: false, rooms: null };
+const ui = { tab: store.get('pgh-tab') || 'order', era: null, sheet: null, err: '', busy: false, rooms: null, tb: false };   // tb: tie-break inputs shown
 // This phone's spend entries for the current round; sent to the room only when settling.
 let draft = {}, draftKey = '';
 function syncDraft() {
@@ -262,12 +262,12 @@ function scoreTab() {
     const bad = filled && num(d, FIELD[key].neg ? -999 : 0) === null;
     return `<button class="cell ${filled ? '' : 'empty'} ${bad ? 'bad' : ''}" data-act="cell" data-era="${era}" data-id="${id}" data-key="${key}">${filled ? esc(d) : key === 'pre' ? '填' : '0'}</button>`;
   };
-  const rows = S.order.map(id => {
-    const t = eraParts(S, era, id);
-    return `<tr data-k="sr-${id}"><td><div class="pc">${por(id, 'xs')}<span>${esc(pname(id))}</span></div></td>${keys.map(k => `<td>${cell(id, k)}</td>`).join('')}<td class="tt">${t ? t.total : '—'}</td></tr>`;
-  }).join('');
+  // one column per player, one row per score field
+  const tots = S.order.map(id => eraParts(S, era, id));
   return `<div class="seg">${[1, 2].map(e => `<button class="${e === era ? 'on' : ''}" data-act="era" data-era="${e}">${eraName(e)}计分</button>`).join('')}</div>
-    <table class="sc"><thead><tr><th>玩家</th>${keys.map(k => `<th>${FIELD[k].n}${k === 'loco' ? '<br>×4' : ''}</th>`).join('')}<th class="tot">合计</th></tr></thead><tbody>${rows}</tbody></table>
+    <table class="sc"><thead><tr><th></th>${S.order.map(id => `<th><div class="pv">${por(id, 'xs')}<span>${esc(pname(id))}</span></div></th>`).join('')}</tr></thead>
+    <tbody>${keys.map(k => `<tr data-k="sr-${k}"><th>${FIELD[k].n}${k === 'loco' ? '<small>×4</small>' : ''}</th>${S.order.map(id => `<td>${cell(id, k)}</td>`).join('')}</tr>`).join('')}
+    <tr data-k="sr-total"><th>合计</th>${S.order.map((id, i) => `<td class="tt" data-tt="${id}">${tots[i] ? tots[i].total : '—'}</td>`).join('')}</tr></tbody></table>
     `;
 }
 
@@ -288,8 +288,8 @@ function mvpTab() {
       <div class="fg">${top.map(r => esc(FIGS[P(r.id).fig])).join(' · ')}</div>
       <div class="pts">${champ.total}<small>分</small></div>
     </div>
-    ${tied.length ? `<div class="card" style="margin-top:8px;padding:8px 10px"><div class="fg" style="font-size:12px;color:var(--ink2)">同分：先比收入等级，再比现金</div>
-      ${tied.map(r => `<div class="tb" data-k="tb-${r.id}">${por(r.id, 'xs')}<span style="flex:1">${esc(pname(r.id))}</span>收入<label class="field"><input type="text" inputmode="numeric" data-pk="sc-2-${r.id}-inc" data-sc="2:${r.id}:inc" value="${esc((S.score[2][r.id] || {}).inc ?? '')}" placeholder="0"></label>现金<label class="field"><i>$</i><input type="text" inputmode="numeric" data-pk="sc-2-${r.id}-cash" data-sc="2:${r.id}:cash" value="${esc((S.score[2][r.id] || {}).cash ?? '')}" placeholder="0"></label></div>`).join('')}</div>` : ''}
+    ${tied.length ? `<div class="card" style="margin-top:8px;padding:8px 10px"><button class="tbh" data-act="tb">同分：先比收入等级，再比现金<span>${ui.tb ? '收起' : '填写'}</span></button>
+      ${!ui.tb ? '' : tied.map(r => `<div class="tb" data-k="tb-${r.id}">${por(r.id, 'xs')}<span style="flex:1">${esc(pname(r.id))}</span>收入<label class="field"><input type="text" inputmode="numeric" data-pk="sc-2-${r.id}-inc" data-sc="2:${r.id}:inc" value="${esc((S.score[2][r.id] || {}).inc ?? '')}" placeholder="0"></label>现金<label class="field"><i>$</i><input type="text" inputmode="numeric" data-pk="sc-2-${r.id}-cash" data-sc="2:${r.id}:cash" value="${esc((S.score[2][r.id] || {}).cash ?? '')}" placeholder="0"></label></div>`).join('')}</div>` : ''}
     <h2 class="h">排名与得分构成</h2>
     <div class="list rk">${R.rows.map(r => `
       <div class="card row" data-k="rk-${r.id}"><div class="stepn">${r.place}</div>${por(r.id, 'sm')}
@@ -434,6 +434,7 @@ document.addEventListener('click', e => {
     case 'tab': ui.tab = d.tab; store.set('pgh-tab', d.tab); render(); window.scrollTo(0, 0); break;
     case 'goto': ui.tab = d.tab; if (d.era) ui.era = +d.era; render(); window.scrollTo(0, 0); break;
     case 'era': ui.era = +d.era; render(); break;
+    case 'tb': ui.tb = !ui.tb; render(); break;
     case 'plus': case 'minus': {
       draft[d.id] = String(Math.max(0, (num(draft[d.id]) ?? 0) + (d.act === 'plus' ? 1 : -1)));
       const input = document.querySelector(`[data-spent="${d.id}"]`);

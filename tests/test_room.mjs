@@ -101,7 +101,7 @@ await keyIn(B, 2, 'orange', 'pre', ['4', '0', 'ok']);   // era1 orange = 8+17+3 
 await keyIn(B, 2, 'orange', 'rail', ['9', '+', '9', '+', '9', '+', '8', 'ok']);
 await keyIn(B, 2, 'orange', 'alt', ['2', 'ok']);
 await wait(400);
-const rowTotals = async p => Object.fromEntries(await p.$$eval('[data-k^="sr-"]', rs => rs.map(r => [r.dataset.k.slice(3), r.querySelector('.tt').textContent])));
+const rowTotals = async p => Object.fromEntries(await p.$$eval('td.tt', ts => ts.map(t => [t.dataset.tt, t.textContent])));
 await A.click('[data-act="era"][data-era="2"]'); await wait(200);
 eq('era2 totals on A', await rowTotals(A), await rowTotals(B));
 { const t = await rowTotals(B); eq('era2 totals values', [t.yellow, t.blue, t.orange], ['78', '93', '77']); }
