@@ -1,4 +1,6 @@
-# 工业革命：匹兹堡 · 顺位与计分助手
+# 匹兹堡开局小助手
+
+快速开局，计分不烧心。
 
 《工业革命：匹兹堡》（Brass: Pittsburgh）桌游的多人房间工具，线上地址：https://pgh.leisurecat.cloud
 

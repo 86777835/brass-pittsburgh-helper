@@ -32,6 +32,19 @@ function syncDraft() {
   if (key !== draftKey) { draftKey = key; draft = { ...S.spent }; }
 }
 
+// Rooms this phone has been in, newest first. Kept on the phone so they don't depend on the public list.
+function mine() {
+  try { const v = JSON.parse(store.get('pgh-mine')); if (Array.isArray(v)) return v; } catch {}
+  const last = store.get('pgh-last');   // older versions only remembered the last room
+  return last ? [last] : [];
+}
+const remember = c => store.set('pgh-mine', JSON.stringify([c, ...mine().filter(x => x !== c)].slice(0, 8)));
+const forget = c => store.set('pgh-mine', JSON.stringify(mine().filter(x => x !== c)));
+function ago(t) {
+  const m = Math.floor((Date.now() - t) / 60000);
+  return m < 1 ? '刚刚' : m < 60 ? `${m} 分钟前` : m < 1440 ? `${Math.floor(m / 60)} 小时前` : `${Math.floor(m / 1440)} 天前`;
+}
+
 // Lobby list on the start page, refreshed while it is showing.
 async function loadRooms() {
   if (code) return;
@@ -57,10 +70,10 @@ function connect() {
         ui.lockTimer = setTimeout(render, SETTLE_COOLDOWN_MS + 50);
       }
       const drew = S && (m.state.draw || 0) > (S.draw || 0);
-      S = m.state; syncDraft(); store.set('pgh-last', code); render();
+      S = m.state; syncDraft(); remember(code); render();
       if (drew) playDraw();
     }
-    else if (m.type === 'error' && m.error === 'noroom') { noRoom = true; ws.close(); render(); }
+    else if (m.type === 'error' && m.error === 'noroom') { noRoom = true; forget(code); ws.close(); render(); }
   };
   ws.onclose = () => {
     online = false; render();
@@ -124,7 +137,7 @@ function view() {
   if (!S) return `${hero()}<div class="wrap"><h2 class="h">正在连接房间 ${code}…</h2></div>`;
   return bar() + `<div class="wrap" data-k="stage-${S.stage === 'setup' ? 'setup' : 'play'}">` + (S.stage === 'setup' ? setupView() : playView()) + footer() + '</div>';
 }
-const hero = () => `<div class="hero" data-k="hero"><div class="en">工业革命 · 匹兹堡</div><h1>顺位与计分助手</h1><div class="orn"></div></div><div class="band"></div>`;
+const hero = () => `<div class="hero" data-k="hero"><div class="en">工业革命 · 匹兹堡</div><h1>匹兹堡开局小助手</h1><div class="orn"></div></div><div class="band"></div>`;
 const bar = () => `<div class="bar" data-k="bar"><span class="ttl">工业革命 · 匹兹堡</span>
   <button class="room" data-act="share"><small>房间</small>${code}<small>邀请</small></button><span class="conn ${online ? 'on' : ''}" title="${online ? '已连接' : '重新连接中'}"></span></div>`;
 const footer = () => '';
@@ -132,14 +145,22 @@ const footer = () => '';
 function landing() {
   const rooms = ui.rooms;
   const stageText = r => r.stage === 'setup' ? '准备中' : r.stage === 'over' ? '已结束' : `${eraName(r.era)} 第 ${r.round} 轮`;
-  const roomList = rooms === null ? '<div class="empty">加载中…</div>' : rooms.length ? rooms.map(r => `
+  const my = mine();
+  const tag = c => my.includes(c) ? '<em>我的</em>' : '';
+  // my rooms first (stable sort keeps the server's order otherwise), then my rooms the public list no longer shows
+  const listed = rooms && rooms.slice().sort((a, b) => my.includes(b.code) - my.includes(a.code));
+  const unlisted = rooms ? my.filter(c => !rooms.some(r => r.code === c)) : [];
+  const roomList = rooms === null ? '<div class="empty">加载中…</div>' : listed.length + unlisted.length ? listed.map(r => `
       <button class="card lobby" data-act="rejoin" data-code="${r.code}" data-k="lb-${r.code}">
-        <span class="lc">${r.code}</span>
+        <span class="lc">${r.code}${tag(r.code)}</span>
         <span class="lp">${r.players.map(p => `<span class="por xs" style="--c:${COLORS[p.id]}"><img src="img/${p.fig}.jpg" alt=""></span>`).join('')}</span>
-        <span class="ls"><b class="st st-${r.stage}">${stageText(r)}</b><small><i class="od${r.online ? ' on' : ''}"></i>${r.online} 人在线</small></span>
+        <span class="ls"><b class="st st-${r.stage}">${stageText(r)}</b><small>${r.online ? `<i class="od on"></i>${r.online} 人在线` : ago(r.updated)}</small></span>
+      </button>`).join('') + unlisted.map(c => `
+      <button class="card lobby" data-act="rejoin" data-code="${c}" data-k="lb-${c}">
+        <span class="lc">${c}${tag(c)}</span><span class="lp"></span><span class="ls"><small>点击进入</small></span>
       </button>`).join('') : '<div class="empty">暂无进行中的房间</div>';
   return `<div class="hero-art" data-k="hero"><img src="img/hero.jpg" alt=""><div class="ht">
-      <div class="wm">BRASS</div><div class="hr"></div><div class="hz">工业革命：匹兹堡</div><div class="hs">顺位与计分助手</div></div></div>
+      <div class="wm">BRASS</div><div class="hr"></div><div class="hz">匹兹堡开局小助手</div><div class="hs">快速开局 · 计分不烧心</div></div></div>
     <div class="wrap" data-k="landing">
     <div class="card start">
       <button class="btn" data-act="create" ${ui.busy ? 'disabled' : ''}>创建新房间</button>
@@ -151,7 +172,7 @@ function landing() {
       <a class="card tile" href="guide"><span class="ti play"><img src="img/rules-poster.jpg" alt=""></span><span><b>新手教程</b>视频 + 图文</span></a>
       <a class="card tile" href="history"><span class="ti rec">录</span><span><b>往期对局</b>战绩查询</span></a>
     </div>
-    <h2 class="h">正在进行<small>${rooms && rooms.length ? `${rooms.length} 个房间` : ''}</small></h2>
+    <h2 class="h">房间<small>${rooms && rooms.length ? `${rooms.length} 个` : ''}</small></h2>
     <div class="list">${roomList}</div>
     <footer>非官方玩家工具</footer></div>`;
 }
@@ -381,7 +402,7 @@ function leave() {
 }
 async function share() {
   const url = `${location.origin}/?r=${code}`;
-  const text = `《工业革命：匹兹堡》顺位与计分助手\n邀请你加入房间 ${code}，点开链接即可和大家同步顺位与计分（无需下载）：`;
+  const text = `匹兹堡开局小助手｜快速开局，计分不烧心\n邀请你加入《工业革命：匹兹堡》房间 ${code}，点开链接就能和大家同步顺位与计分（无需下载）：`;
   if (navigator.share) { try { await navigator.share({ title: '工业革命：匹兹堡 · 房间 ' + code, text, url }); return; } catch (e) { if (e.name === 'AbortError') return; } }
   try { await navigator.clipboard.writeText(`${text}\n${url}`); toast('邀请已复制，发给朋友即可'); } catch { toast('房间码 ' + code); }
 }

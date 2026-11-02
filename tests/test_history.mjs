@@ -59,7 +59,8 @@ await page.screenshot({ path: out + '/h_open.png' });
 
 await send({ t: 'undo' }); await wait(400);
 eq('undo final settle removes record', (await games(code)).length, 0);
-if (live) { ws.close(); await b.close(); eq('no page errors', errs, []); console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0); }
+if (live) { await wait(2600); await send({ t: 'reset' }); ws.close();   // back to setup so the room leaves the public list
+  await b.close(); eq('no page errors', errs, []); console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0); }
 await wait(2600);
 await send({ t: 'settle', era: S.era, round: S.round, spent: { [S.order[0]]: 1, [S.order[1]]: 2 } }); await wait(400);
 eq('settling again restores record', (await games(code)).length, 1);

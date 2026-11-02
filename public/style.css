@@ -292,3 +292,4 @@ a.btn.ghost{line-height:35px}
 @keyframes drPop{0%{opacity:0;transform:translate(calc(var(--d) * 74px),170px) scale(.3)}45%{opacity:1;transform:translate(calc(var(--d) * 37px),-28px) scale(1.15)}100%{opacity:1;transform:none}}
 @keyframes drShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-9deg)}40%{transform:rotate(8deg)}60%{transform:rotate(-5deg)}80%{transform:rotate(3deg)}}
 @keyframes drJig{0%,100%{transform:scale(1)}25%{transform:scale(1.07,.93)}}
+.lobby .lc em{display:block;margin-top:1px;font:700 10px var(--sans);font-style:normal;letter-spacing:2px;color:var(--brass)}

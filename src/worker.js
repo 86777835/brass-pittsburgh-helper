@@ -52,8 +52,8 @@ async function serveMedia(env, key, req) {
 
 const lobby = env => env.LOBBY.get(env.LOBBY.idFromName('lobby'));
 const archive = env => env.ARCHIVE.get(env.ARCHIVE.idFromName('archive'));
-const LIST_AFTER_IDLE_MS = 30 * 60 * 1000;   // an empty room stays listed this long after its last activity
-const LIST_MAX_MS = 12 * 3600 * 1000;
+const LIST_SETUP_IDLE_MS = 30 * 60 * 1000;        // a room whose game hasn't started stays listed this long after everyone leaves
+const LIST_GAME_IDLE_MS = 7 * 24 * 3600 * 1000;   // a started or finished game stays listed this long after its last activity
 
 // Lobby: one Durable Object holding a short summary of every recently active room.
 export class Lobby extends DurableObject {
@@ -62,7 +62,7 @@ export class Lobby extends DurableObject {
     const now = Date.now();
     if (req.method === 'POST') { const r = await req.json(); rooms[r.code] = { ...r, updated: now }; }
     for (const [c, r] of Object.entries(rooms)) {
-      if (now - r.updated > LIST_MAX_MS || (r.online === 0 && now - r.updated > LIST_AFTER_IDLE_MS)) delete rooms[c];
+      if (now - r.updated > LIST_GAME_IDLE_MS || (r.stage === 'setup' && r.online === 0 && now - r.updated > LIST_SETUP_IDLE_MS)) delete rooms[c];
     }
     await this.ctx.storage.put('rooms', rooms);
     if (req.method === 'POST') return new Response('ok');
