@@ -7,7 +7,7 @@
 - 计分：两个时代的计分条、火车链接、产业板块、多相交流发电机、机车工厂，数字键盘支持加减
 - 结算：MVP、得分构成、成就；平分按收入等级、再按现金
 - 往期对局：每局结束自动存档（Durable Object `Archive`），`/history` 可按玩家名、角色或房间码搜索
-- 新手教程：`/guide`，规则讲解视频（存放在 R2 存储桶 `pgh-media`，经 `/media/rules.mp4` 播放）和 23 节图文讲解
+- 新手教程：`/guide`，规则讲解视频（存放在 R2 存储桶 `pgh-media`，经 `/media/rules.mp4` 播放）、23 节图文讲解和 31 条常见问题（依据官方规则书整理）
 
 规则依据官方规则书 v2026.01。非官方玩家工具，人物肖像为重新绘制的插画。
 
@@ -20,6 +20,7 @@
 | `src/worker.js` | Cloudflare Worker：建房接口、`Room`（每个房间一个 Durable Object，WebSocket 同步）、`Lobby`（房间列表）、`Archive`（往期对局） |
 | `wrangler.jsonc` | 部署配置，自定义域名 `pgh.leisurecat.cloud` |
 | `tests/` | Playwright 多手机测试 |
+| `tools/` | 生成新手教程页：`python3 tools/build_guide.py tools/讲解稿.md public/guide.html tools/faq.json`（讲解稿 + 常见问题数据） |
 
 ## 开发与部署
 

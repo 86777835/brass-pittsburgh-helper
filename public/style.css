@@ -265,3 +265,13 @@ a.btn.ghost{line-height:35px}
 #search input{font:500 15px var(--sans);letter-spacing:0;text-transform:none;text-align:left;padding:0 12px}
 .start .join input::placeholder{font:500 15px var(--sans);letter-spacing:6px;color:#a59a86}
 .tile .ti.play img{object-position:80% 50%}
+.guide .toc a.fqa{background:var(--navy);border-color:var(--navy);color:#fff}
+#faq{scroll-margin-top:10px}
+.fq-cat{margin:16px 2px 6px;font:900 15px var(--serif);letter-spacing:2px;color:var(--navy)}
+.fq{margin-top:6px}
+.fq summary{position:relative;list-style:none;padding:10px 32px 10px 12px;font:600 14.5px/1.5 var(--sans);cursor:pointer}
+.fq summary::-webkit-details-marker{display:none}
+.fq summary:after{content:"+";position:absolute;right:12px;top:8px;font:500 20px var(--num);color:var(--brass)}
+.fq[open] summary:after{content:"−"}
+.fq p{padding:0 12px 11px;font:500 14px/1.7 var(--sans);color:var(--ink2)}
+.fq p a{font-size:12px;color:var(--navy2);white-space:nowrap}
