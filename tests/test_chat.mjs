@@ -73,6 +73,18 @@ if (mode === '--live') {
   eq('12th question sends last 10 messages', [lastBody.length, lastBody.at(-1).content], [10, '第12问']);
   eq('no error in a long chat', await page.$$eval('.cm.err', l => l.length), 1);   // only the not-configured one at the start
   await page.screenshot({ path: out + '/chat_panel.png' });
+  // DeepSeek queueing: no text for 30 s → stop waiting with a clear message (clock faked so the test is quick)
+  const p2 = await (await b.newContext({ viewport: { width: 375, height: 667 } })).newPage();
+  p2.on('pageerror', e => errs.push(e.message));
+  await p2.clock.install();
+  await p2.route('**/api/chat', () => {});   // never answers
+  await p2.goto(base); await p2.click('.cfab'); await p2.click('.csug button');
+  await p2.clock.fastForward(29000);
+  eq('still waiting at 29 s', [await p2.$('.cm.err'), await p2.isDisabled('.cin button')], [null, true]);
+  await p2.clock.fastForward(2000); await p2.waitForSelector('.cm.err');
+  eq('gives up at 30 s with busy message', (await p2.textContent('.cm.err')).includes('30 秒还没开始回答'), true);
+  eq('can ask again after timeout', await p2.isDisabled('.cin button'), false);
+  await p2.close();
   await page.goto(base); await page.click('.cfab'); await wait(400);
   await page.screenshot({ path: out + '/chat_welcome.png' });
   await page.click('.cx'); await wait(200);

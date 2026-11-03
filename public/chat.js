@@ -48,8 +48,10 @@ async function ask(q) {
   msgs.push({ role: 'user', content: q });
   const out = bubble('a', '<i class="cdots"><b></b><b></b><b></b></i>');
   let text = '';
+  // When DeepSeek is overloaded it queues the request and sends nothing; stop waiting if no text in 30 s.
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 30000);
   try {
-    const r = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages: msgs.slice(-10) }) });   // the server keeps only the last 10 and rejects over 20
+    const r = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages: msgs.slice(-10) }), signal: ctl.signal });   // the server keeps only the last 10 and rejects over 20
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `出错了（${r.status}）`);
     const reader = r.body.getReader(), dec = new TextDecoder();
     let buf = '';
@@ -64,7 +66,7 @@ async function ask(q) {
         const data = line.slice(5).trim();
         if (data === '[DONE]') continue;
         const piece = JSON.parse(data).choices?.[0]?.delta?.content;
-        if (piece) { text += piece; out.innerHTML = fmt(text); log.scrollTop = log.scrollHeight; }
+        if (piece) { clearTimeout(timer); text += piece; out.innerHTML = fmt(text); log.scrollTop = log.scrollHeight; }
       }
     }
     if (!text) throw new Error('没有收到回答，请再问一次');
@@ -72,7 +74,9 @@ async function ask(q) {
   } catch (e) {
     msgs.pop();   // drop the unanswered question so the next request stays well formed
     out.classList.add('err');
-    out.innerHTML = (text ? fmt(text) + '<br>' : '') + esc(NET_ERRS.includes(e.message) ?'网络连接失败，请检查网络后再试' : e.message);
+    out.innerHTML = (text ? fmt(text) + '<br>' : '') + esc(ctl.signal.aborted ? 'DeepSeek 服务器正忙，30 秒还没开始回答，请过一两分钟再问'
+      : NET_ERRS.includes(e.message) ? '网络连接失败，请检查网络后再试' : e.message);
   }
+  clearTimeout(timer);
   busy = false; sendBtn.disabled = false;
 }
