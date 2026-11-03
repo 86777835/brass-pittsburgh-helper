@@ -29,12 +29,17 @@ if (mode === '--fake-key') {
 if (mode === '--mock-upstream') {
   // Backup model. Needs: wrangler dev --var DEEPSEEK_API_KEY:fake --var DEEPSEEK_BASE:http://127.0.0.1:8790
   const { createServer } = await import('node:http');
-  let reply = {}, seen = [];   // reply: model → status; seen: models asked, in order
+  let reply = {}, seen = [];   // reply: model → status or 'queue'; seen: models asked, in order
   const srv = createServer((req, res) => {
     let body = ''; req.on('data', c => body += c);
     req.on('end', () => {
       const { model } = JSON.parse(body); seen.push(model);
       const st = reply[model] ?? 200;
+      if (st === 'queue') {   // like an overloaded DeepSeek: accepted, then only keep-alive comments
+        res.writeHead(200, { 'content-type': 'text/event-stream' });
+        const t = setInterval(() => res.write(': keep-alive\n\n'), 1000);
+        return res.on('close', () => clearInterval(t));
+      }
       if (st !== 200) { res.writeHead(st, { 'content-type': 'application/json' }); return res.end('{"error":{"message":"mock"}}'); }
       res.writeHead(200, { 'content-type': 'text/event-stream' });
       res.end(`data: ${JSON.stringify({ choices: [{ delta: { content: `${model} 的回答` } }] })}\n\ndata: [DONE]\n\n`);
@@ -59,6 +64,13 @@ if (mode === '--mock-upstream') {
   eq('bad key → no switch, error shown', [await askOnce('四', { 'deepseek-flash': 401 }), seen], [[true, '规则助手暂时不可用（401），请稍后再试'], ['deepseek-flash']]);
   eq('both busy → busy message', [await askOnce('五', { 'deepseek-flash': 503, 'deepseek-v4-pro': 503 }), seen],
     [[true, 'DeepSeek 服务器正忙（503），请过一两分钟再问'], ['deepseek-flash', 'deepseek-v4-pro']]);
+  const t0 = Date.now();
+  eq('flash queueing → v4-pro answers after 12 s', [(await askOnce('六', { 'deepseek-flash': 'queue' }))[0], seen], [false, ['deepseek-flash', 'deepseek-v4-pro']]);
+  console.log('  took', Date.now() - t0, 'ms');
+  const t1 = Date.now();
+  eq('both queueing → busy message before the page gives up', [await askOnce('七', { 'deepseek-flash': 'queue', 'deepseek-v4-pro': 'queue' }), seen],
+    [[true, 'DeepSeek 服务器正忙（排队中），请过一两分钟再问'], ['deepseek-flash', 'deepseek-v4-pro']]);
+  console.log('  took', Date.now() - t1, 'ms');
   await page.screenshot({ path: out + '/chat_fallback.png' });
   await b.close(); srv.close();
   console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);

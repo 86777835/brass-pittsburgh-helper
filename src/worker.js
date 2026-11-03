@@ -54,9 +54,10 @@ async function serveMedia(env, key, req) {
 }
 
 // Rules assistant: answers from the tutorial script and FAQ (both written from the official rulebook) via DeepSeek.
-// Newest first. The next model answers only when the one before is overloaded, erroring (429/5xx) or unreachable;
+// Newest first. The next model answers only when the one before is overloaded, queueing, erroring (429/5xx) or unreachable;
 // the reply then carries an x-chat-fallback header, the page says so under the answer, and the log records it.
 const CHAT_MODELS = ['deepseek-flash', 'deepseek-v4-pro'];   // DeepSeek V4.1 Flash, then V4 Pro
+const FIRST_DATA_MS = 12000;   // two models × 12 s stays under the page's 30 s wait
 const CHAT_SYSTEM = `你是「匹兹堡规则助手」，帮玩家解答桌游《工业革命：匹兹堡》（Brass: Pittsburgh）的规则问题，也可以解释本网站「匹兹堡开局小助手」怎么用。
 
 回答要求：
@@ -82,28 +83,52 @@ async function chat(req, env) {
     && msgs.every(m => ['user', 'assistant'].includes(m?.role) && typeof m.content === 'string' && m.content.trim() && m.content.length <= 3000);
   if (!valid) return Response.json({ error: '问题格式不对，请刷新页面再试' }, { status: 400 });
   const base = env.DEEPSEEK_BASE || 'https://api.deepseek.com';   // overridden only by the local fallback test
-  let r, model;
-  for (model of CHAT_MODELS) {
-    r = await fetch(`${base}/chat/completions`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${env.DEEPSEEK_API_KEY}` },
-      body: JSON.stringify({
-        model, stream: true, thinking: { type: 'disabled' }, max_tokens: 900, temperature: 0.3,
-        messages: [{ role: 'system', content: CHAT_SYSTEM }, ...msgs.slice(-10).map(m => ({ role: m.role, content: m.content }))]
-      })
-    }).catch(e => ({ ok: false, status: 0, text: async () => String(e) }));   // status 0: unreachable
-    if (r.ok) break;
-    console.log('deepseek error', model, r.status, (await r.text()).slice(0, 500));
-    if (r.status && r.status !== 429 && r.status < 500) break;   // bad key or request: the next model would fail the same way
+  let status;   // last failure: HTTP status, 0 = unreachable, 'queue' = no answer started in time
+  for (const model of CHAT_MODELS) {
+    // An overloaded DeepSeek may accept the request and then only send keep-alive comments while it waits in a queue.
+    // Hold the reply until the first data line arrives, and give each model FIRST_DATA_MS to get there.
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), FIRST_DATA_MS);
+    try {
+      const r = await fetch(`${base}/chat/completions`, {
+        method: 'POST', signal: ctl.signal,
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${env.DEEPSEEK_API_KEY}` },
+        body: JSON.stringify({
+          model, stream: true, thinking: { type: 'disabled' }, max_tokens: 900, temperature: 0.3,
+          messages: [{ role: 'system', content: CHAT_SYSTEM }, ...msgs.slice(-10).map(m => ({ role: m.role, content: m.content }))]
+        })
+      });
+      if (!r.ok) {
+        clearTimeout(timer); status = r.status;
+        console.log('deepseek error', model, r.status, (await r.text()).slice(0, 500));
+        if (r.status !== 429 && r.status < 500) break;   // bad key or request: the next model would fail the same way
+        continue;
+      }
+      const reader = r.body.getReader(), dec = new TextDecoder(), head = [];
+      let seen = '';
+      while (!seen.includes('data:')) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        head.push(value); seen += dec.decode(value, { stream: true });
+      }
+      clearTimeout(timer);
+      if (!seen.includes('data:')) { status = 502; console.log('deepseek empty reply', model); continue; }
+      if (model !== CHAT_MODELS[0]) console.log('deepseek fallback answered', model);
+      const body = new ReadableStream({
+        start(c) { head.forEach(v => c.enqueue(v)); },
+        async pull(c) { const { done, value } = await reader.read(); done ? c.close() : c.enqueue(value); },
+        cancel() { reader.cancel(); }
+      });
+      const h = { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache' };
+      if (model !== CHAT_MODELS[0]) h['x-chat-fallback'] = model;
+      return new Response(body, { headers: h });
+    } catch (e) {
+      clearTimeout(timer);
+      status = ctl.signal.aborted ? 'queue' : 0;
+      console.log('deepseek', status === 'queue' ? `queued over ${FIRST_DATA_MS / 1000}s` : 'unreachable', model, String(e).slice(0, 200));
+    }
   }
-  if (!r.ok) {
-    const busy = r.status === 503 || r.status === 429;   // DeepSeek overloaded / throttled
-    return Response.json({ error: busy ? `DeepSeek 服务器正忙（${r.status}），请过一两分钟再问` : `规则助手暂时不可用（${r.status}），请稍后再试` }, { status: 502 });
-  }
-  if (model !== CHAT_MODELS[0]) console.log('deepseek fallback answered', model);
-  const h = { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache' };
-  if (model !== CHAT_MODELS[0]) h['x-chat-fallback'] = model;
-  return new Response(r.body, { headers: h });
+  const busy = status === 503 || status === 429 || status === 'queue';   // DeepSeek overloaded / throttled / queueing
+  return Response.json({ error: busy ? `DeepSeek 服务器正忙（${status === 'queue' ? '排队中' : status}），请过一两分钟再问` : `规则助手暂时不可用（${status}），请稍后再试` }, { status: 502 });
 }
 
 const lobby = env => env.LOBBY.get(env.LOBBY.idFromName('lobby'));
