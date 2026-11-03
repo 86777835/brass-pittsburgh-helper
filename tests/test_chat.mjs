@@ -26,6 +26,44 @@ if (mode === '--fake-key') {
   console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);
 }
 
+if (mode === '--mock-upstream') {
+  // Backup model. Needs: wrangler dev --var DEEPSEEK_API_KEY:fake --var DEEPSEEK_BASE:http://127.0.0.1:8790
+  const { createServer } = await import('node:http');
+  let reply = {}, seen = [];   // reply: model → status; seen: models asked, in order
+  const srv = createServer((req, res) => {
+    let body = ''; req.on('data', c => body += c);
+    req.on('end', () => {
+      const { model } = JSON.parse(body); seen.push(model);
+      const st = reply[model] ?? 200;
+      if (st !== 200) { res.writeHead(st, { 'content-type': 'application/json' }); return res.end('{"error":{"message":"mock"}}'); }
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.end(`data: ${JSON.stringify({ choices: [{ delta: { content: `${model} 的回答` } }] })}\n\ndata: [DONE]\n\n`);
+    });
+  }).listen(8790);
+  const b = await chromium.launch({ channel: 'chrome' });
+  const page = await (await b.newContext({ viewport: { width: 375, height: 667 } })).newPage();
+  page.on('pageerror', e => { fails++; console.log('FAIL page error', e.message); });
+  const bodies = []; page.on('request', r => r.url().endsWith('/api/chat') && bodies.push(JSON.parse(r.postData())));
+  await page.goto(base); await page.click('.cfab');
+  const askOnce = async (q, r) => {
+    reply = r; seen = [];
+    await page.fill('.cin textarea', q); await page.press('.cin textarea', 'Enter');
+    await page.waitForFunction(() => !document.querySelector('.cin button').disabled);
+    return page.$$eval('.cm.a', l => [l.at(-1).className.includes('err'), l.at(-1).textContent]);
+  };
+  eq('flash answers, no note', [await askOnce('一', {}), seen], [[false, 'deepseek-flash 的回答'], ['deepseek-flash']]);
+  eq('flash busy → v4-pro answers with a note', [await askOnce('二', { 'deepseek-flash': 503 }), seen],
+    [[false, 'deepseek-v4-pro 的回答DeepSeek V4.1 Flash 正忙，本条由备用模型 deepseek-v4-pro 回答'], ['deepseek-flash', 'deepseek-v4-pro']]);
+  eq('flash 500 → v4-pro', [(await askOnce('三', { 'deepseek-flash': 500 }))[0], seen], [false, ['deepseek-flash', 'deepseek-v4-pro']]);
+  eq('note not sent back as history', bodies.at(-1).messages.at(-2).content, 'deepseek-v4-pro 的回答');
+  eq('bad key → no switch, error shown', [await askOnce('四', { 'deepseek-flash': 401 }), seen], [[true, '规则助手暂时不可用（401），请稍后再试'], ['deepseek-flash']]);
+  eq('both busy → busy message', [await askOnce('五', { 'deepseek-flash': 503, 'deepseek-v4-pro': 503 }), seen],
+    [[true, 'DeepSeek 服务器正忙（503），请过一两分钟再问'], ['deepseek-flash', 'deepseek-v4-pro']]);
+  await page.screenshot({ path: out + '/chat_fallback.png' });
+  await b.close(); srv.close();
+  console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);
+}
+
 const b = await chromium.launch({ channel: 'chrome' });
 const page = await (await b.newContext({ viewport: { width: 375, height: 667 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })).newPage();
 const errs = []; page.on('pageerror', e => errs.push(e.message));

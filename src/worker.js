@@ -54,7 +54,9 @@ async function serveMedia(env, key, req) {
 }
 
 // Rules assistant: answers from the tutorial script and FAQ (both written from the official rulebook) via DeepSeek.
-const CHAT_MODEL = 'deepseek-flash';   // DeepSeek V4.1 Flash
+// Newest first. The next model answers only when the one before is overloaded, erroring (429/5xx) or unreachable;
+// the reply then carries an x-chat-fallback header, the page says so under the answer, and the log records it.
+const CHAT_MODELS = ['deepseek-flash', 'deepseek-v4-pro'];   // DeepSeek V4.1 Flash, then V4 Pro
 const CHAT_SYSTEM = `你是「匹兹堡规则助手」，帮玩家解答桌游《工业革命：匹兹堡》（Brass: Pittsburgh）的规则问题，也可以解释本网站「匹兹堡开局小助手」怎么用。
 
 回答要求：
@@ -79,20 +81,29 @@ async function chat(req, env) {
   const valid = Array.isArray(msgs) && msgs.length > 0 && msgs.length <= 20 && msgs.at(-1).role === 'user' && msgs.at(-1).content?.length <= 500
     && msgs.every(m => ['user', 'assistant'].includes(m?.role) && typeof m.content === 'string' && m.content.trim() && m.content.length <= 3000);
   if (!valid) return Response.json({ error: '问题格式不对，请刷新页面再试' }, { status: 400 });
-  const r = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.DEEPSEEK_API_KEY}` },
-    body: JSON.stringify({
-      model: CHAT_MODEL, stream: true, thinking: { type: 'disabled' }, max_tokens: 900, temperature: 0.3,
-      messages: [{ role: 'system', content: CHAT_SYSTEM }, ...msgs.slice(-10).map(m => ({ role: m.role, content: m.content }))]
-    })
-  });
+  const base = env.DEEPSEEK_BASE || 'https://api.deepseek.com';   // overridden only by the local fallback test
+  let r, model;
+  for (model of CHAT_MODELS) {
+    r = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({
+        model, stream: true, thinking: { type: 'disabled' }, max_tokens: 900, temperature: 0.3,
+        messages: [{ role: 'system', content: CHAT_SYSTEM }, ...msgs.slice(-10).map(m => ({ role: m.role, content: m.content }))]
+      })
+    }).catch(e => ({ ok: false, status: 0, text: async () => String(e) }));   // status 0: unreachable
+    if (r.ok) break;
+    console.log('deepseek error', model, r.status, (await r.text()).slice(0, 500));
+    if (r.status && r.status !== 429 && r.status < 500) break;   // bad key or request: the next model would fail the same way
+  }
   if (!r.ok) {
-    console.log('deepseek error', r.status, (await r.text()).slice(0, 500));
     const busy = r.status === 503 || r.status === 429;   // DeepSeek overloaded / throttled
     return Response.json({ error: busy ? `DeepSeek 服务器正忙（${r.status}），请过一两分钟再问` : `规则助手暂时不可用（${r.status}），请稍后再试` }, { status: 502 });
   }
-  return new Response(r.body, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache' } });
+  if (model !== CHAT_MODELS[0]) console.log('deepseek fallback answered', model);
+  const h = { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache' };
+  if (model !== CHAT_MODELS[0]) h['x-chat-fallback'] = model;
+  return new Response(r.body, { headers: h });
 }
 
 const lobby = env => env.LOBBY.get(env.LOBBY.idFromName('lobby'));
