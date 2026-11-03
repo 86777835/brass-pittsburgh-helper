@@ -37,7 +37,9 @@ export default {
     if (media && req.method === 'GET') return serveMedia(env, media[1], req);
 
     return new Response('Not found', { status: 404 });
-  }
+  },
+
+  async scheduled(event, env) { await checkDeepSeek(env); }
 };
 
 // Files in the R2 bucket (the rules video). Honors Range so phones can seek.
@@ -68,6 +70,22 @@ const CHAT_MODELS = [
 ];
 const FIRST_DATA_MS = 9000;   // three models × 9 s stays under the page's 30 s wait
 const STALL_MS = 8000;        // an answer that pauses this long mid-way is dropped and asked again of the next model
+// Hourly check (cron): when DeepSeek doesn't answer, Qwen goes first until the next check.
+const DEEPSEEK_DOWN = 'deepseek-down';   // KV key; expires on its own a little after the next hourly check
+const ORDER = { normal: [0, 1, 2], deepseekDown: [1, 0, 2] };   // indexes into CHAT_MODELS
+
+async function checkDeepSeek(env) {
+  const fails = [];
+  const o = await openModel(0, env, [{ role: 'user', content: '你好' }], fails);
+  if (o) {
+    o.reader.cancel().catch(() => {});
+    await env.CHAT_STATE.delete(DEEPSEEK_DOWN);
+    console.log('deepseek check: ok');
+  } else {
+    await env.CHAT_STATE.put(DEEPSEEK_DOWN, JSON.stringify({ at: new Date().toISOString(), fails }), { expirationTtl: 3900 });
+    console.log('deepseek check: down, Qwen first for the next hour', fails.join('/'));
+  }
+}
 const CHAT_SYSTEM = `你是「匹兹堡规则助手」，帮玩家解答桌游《工业革命：匹兹堡》（Brass: Pittsburgh）的规则问题，也可以解释本网站「匹兹堡开局小助手」怎么用。
 
 回答要求：
@@ -94,7 +112,8 @@ async function chat(req, env) {
   if (!valid) return Response.json({ error: '问题格式不对，请刷新页面再试' }, { status: 400 });
   const messages = [{ role: 'system', content: CHAT_SYSTEM }, ...msgs.slice(-10).map(m => ({ role: m.role, content: m.content }))];
   const fails = [];   // HTTP status, 0 = unreachable or error, 'queue' = no answer started in time or stalled
-  let cur = await firstAnswer(0, env, messages, fails);
+  const order = await env.CHAT_STATE.get(DEEPSEEK_DOWN) ? ORDER.deepseekDown : ORDER.normal;
+  let cur = await firstAnswer(order, 0, env, messages, fails);
   if (!cur) return Response.json({ error: chatFailed(fails) }, { status: 502 });
   const enc = new TextEncoder(), dec = new TextDecoder();
   const event = o => enc.encode(`data: ${JSON.stringify(o)}\n\n`);
@@ -111,7 +130,7 @@ async function chat(req, env) {
         if (r === 'stall') console.log(`chat model stalled ${STALL_MS / 1000}s mid-answer`, CHAT_MODELS[cur.i].id);
         fails.push(r === 'stall' ? 'queue' : 0);
         cur.reader.cancel().catch(() => {});
-        const next = await firstAnswer(cur.i + 1, env, messages, fails);
+        const next = await firstAnswer(order, cur.k + 1, env, messages, fails);
         if (!next) { c.enqueue(event({ error: chatFailed(fails) })); return c.close(); }
         cur = next; lastData = Date.now();
         c.enqueue(event({ reset: CHAT_MODELS[cur.i].name }));   // the page drops the partial answer and starts over
@@ -132,11 +151,12 @@ async function chat(req, env) {
 const chatFailed = fails => fails.some(f => f === 503 || f === 429 || f === 'queue')   // overloaded / throttled / queueing
   ? 'AI 服务器都在忙，请过一两分钟再问' : `规则助手暂时不可用（${fails.join('/')}），请稍后再试`;
 
-// The first model from index `from` on that starts answering: { i, reader, head } (head = chunks read so far), or null.
-async function firstAnswer(from, env, messages, fails) {
-  for (let i = from; i < CHAT_MODELS.length; i++) {
-    const o = await openModel(i, env, messages, fails);
-    if (o) { if (i) console.log('chat fallback answered', CHAT_MODELS[i].id); return { i, ...o }; }
+// The first model from position `from` in `order` that starts answering:
+// { k: position, i: index into CHAT_MODELS, reader, head (chunks read so far) }, or null.
+async function firstAnswer(order, from, env, messages, fails) {
+  for (let k = from; k < order.length; k++) {
+    const i = order[k], o = await openModel(i, env, messages, fails);
+    if (o) { if (i) console.log('chat fallback answered', CHAT_MODELS[i].id); return { k, i, ...o }; }
   }
   return null;
 }
