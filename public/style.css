@@ -178,6 +178,13 @@ table.sc{width:100%;margin-top:8px;border-collapse:separate;border-spacing:0 6px
 .ach .aw{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
 .tbh{display:flex;width:100%;justify-content:space-between;align-items:center;padding:2px 0;border:none;background:none;font:12px var(--sans);color:var(--ink2);text-align:left}
 .tbh span{color:var(--brass);font-weight:700}
+.sv .btn{height:40px;margin-top:8px;font:700 14px var(--sans);letter-spacing:1px}
+.tb .pn{flex:1;min-width:0}
+.shotv{position:fixed;inset:0;z-index:60;overflow:auto;padding:0 16px 24px;background:rgba(15,19,28,.94)}
+.shotv img{display:block;width:100%;max-width:480px;margin:0 auto;border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+.sv-top{position:sticky;top:0;display:flex;align-items:center;gap:10px;max-width:480px;margin:0 auto;padding:12px 0 10px;background:rgba(15,19,28,.94);color:var(--brass2);font:600 14px var(--sans)}
+.sv-top span{flex:1}
+.sv-top a,.sv-top button{padding:5px 12px;border:1px solid rgba(255,255,255,.4);border-radius:5px;background:none;color:#fff;font:600 13px var(--sans);text-decoration:none}
 .tb{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--ink2)}
 .tb .field{width:58px;height:32px}
 footer{margin-top:18px;text-align:center;font-size:10.5px;line-height:1.6;color:var(--ink2);opacity:.8}

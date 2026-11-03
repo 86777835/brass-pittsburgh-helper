@@ -1,6 +1,7 @@
 // Extra checks: 4 players, small screens, join by code, bad room, invalid input, undo, offline, tie-break, reset.
 // Usage: node test_room2.mjs <baseUrl> <outDir>
 import { chromium } from 'playwright-core';
+import { writeFileSync } from 'node:fs';
 const [,, BASE, OUT] = process.argv;
 const b = await chromium.launch({ channel: 'chrome' });
 const mk = async (w, h) => {
@@ -140,6 +141,23 @@ const achs = await C.$$eval('.ach', a => a.map(x => x.querySelector('.an').textC
 console.log('achievements', achs.join(' / '));
 eq('rise achievement for p1 (3rd -> 2nd)', achs.includes('后来居上'), true);
 await shot(C, '06_mvp_android');
+
+// names can still change on the results tab (synced and archived); the results save as one long image
+await C.click('[data-act="rn"]'); await wait(200);
+const rnSel = `[data-k="rn"] [data-name="${await C.getAttribute('[data-k="rn"] input', 'data-name')}"]`;
+const oldName = await C.inputValue(rnSel);
+await C.fill(rnSel, '改名王'); await C.press(rnSel, 'Enter'); await wait(1200);
+eq('rename after the game shows on A', (await A.textContent('.rk')).includes('改名王'), true);
+eq('rename reaches the archive', (await (await fetch(new URL('/api/games?q=' + encodeURIComponent('改名王'), BASE))).json()).length > 0, true);
+await C.click('[data-act="save"]'); await C.waitForSelector('.shotv img', { timeout: 20000 });
+const dim = await C.$eval('.shotv img', i => [i.naturalWidth, i.naturalHeight]);
+console.log('long image', dim.join('x'));
+eq('long image is tall', dim[1] > dim[0] * 1.5, true);
+writeFileSync(`${OUT}/07_long.jpg`, Buffer.from((await C.$eval('.shotv img', i => i.src)).split(',')[1], 'base64'));
+await shot(C, '07_save_view');
+await C.click('.shotv button');
+eq('image view closes', await C.$('.shotv'), null);
+await C.fill(rnSel, oldName); await C.press(rnSel, 'Enter'); await wait(1200);
 
 // reset returns everyone to setup with names kept
 await B.click('[data-act="tab"][data-tab="order"]'); await B.click('[data-act="reset"]'); await wait(900);

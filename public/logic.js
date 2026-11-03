@@ -53,8 +53,8 @@ export function reduce(s, a) {
       S.n = a.n; return done();
 
     case 'player': {
-      if (S.stage !== 'setup') return null;
       const p = S.players[a.i]; if (!p || a.i >= S.n) return null;
+      if (S.stage !== 'setup' && (a.fig !== undefined || a.color !== undefined)) return null;   // after the start only names can change
       if (a.name !== undefined) p.name = cleanText(a.name, 12).trim();
       if (a.fig !== undefined) {
         if (!COLOR_FIGS[p.id].includes(a.fig) || seated(S).some(o => o !== p && o.fig === a.fig)) return null;

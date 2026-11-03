@@ -24,7 +24,7 @@ const store = {
 
 let code = cleanCode(new URLSearchParams(location.search).get('r'));
 let S = null, noRoom = false, online = false, ws = null, queue = [], retry = 0;
-const ui = { tab: store.get('pgh-tab') || 'order', era: null, sheet: null, err: '', busy: false, rooms: null, tb: false };   // tb: tie-break inputs shown
+const ui = { tab: store.get('pgh-tab') || 'order', era: null, sheet: null, err: '', busy: false, rooms: null, tb: false, rn: false, saving: false };   // tb: tie-break inputs shown; rn: rename inputs shown on the results tab
 // This phone's spend entries for the current round; sent to the room only when settling.
 let draft = {}, draftKey = '';
 function syncDraft() {
@@ -280,7 +280,7 @@ function mvpTab() {
   const warn = [];
   if (R.rows.some(r => r.pre2Missing)) warn.push('还有玩家没填第二时代计分条分数');
   const tied = R.rows.filter(r => r.tiedPts);
-  return `${warn.map(w => `<p class="note">${w}</p>`).join('')}
+  return `<div id="shot">${warn.map(w => `<p class="note" data-html2canvas-ignore>${w}</p>`).join('')}
     <div class="mvp" style="margin-top:8px">
       <div class="crown">${top.length > 1 ? '并 列 第 一' : 'M V P · 工 业 大 亨'}</div>
       ${por(champ.id)}
@@ -288,7 +288,9 @@ function mvpTab() {
       <div class="fg">${top.map(r => esc(FIGS[P(r.id).fig])).join(' · ')}</div>
       <div class="pts">${champ.total}<small>分</small></div>
     </div>
-    ${tied.length ? `<div class="card" style="margin-top:8px;padding:8px 10px"><button class="tbh" data-act="tb">同分：先比收入等级，再比现金<span>${ui.tb ? '收起' : '填写'}</span></button>
+    <div class="btns sv" data-html2canvas-ignore><button class="btn ghost" data-act="rn">${ui.rn ? '收起改名' : '修改玩家名'}</button><button class="btn navy" data-act="save" ${ui.saving ? 'disabled' : ''}>${ui.saving ? '正在生成…' : '保存结算长图'}</button></div>
+    ${ui.rn ? `<div class="card" data-k="rn" data-html2canvas-ignore style="margin-top:8px;padding:2px 10px 8px">${S.order.map(id => { const i = S.players.findIndex(p => p.id === id); return `<div class="tb">${por(id, 'xs')}<input class="pn" data-pk="name-${i}" data-name="${i}" value="${esc(P(id).name)}" placeholder="玩家名" maxlength="12" enterkeyhint="done"></div>`; }).join('')}</div>` : ''}
+    ${tied.length ? `<div class="card" data-html2canvas-ignore style="margin-top:8px;padding:8px 10px"><button class="tbh" data-act="tb">同分：先比收入等级，再比现金<span>${ui.tb ? '收起' : '填写'}</span></button>
       ${!ui.tb ? '' : tied.map(r => `<div class="tb" data-k="tb-${r.id}">${por(r.id, 'xs')}<span style="flex:1">${esc(pname(r.id))}</span>收入<label class="field"><input type="text" inputmode="numeric" data-pk="sc-2-${r.id}-inc" data-sc="2:${r.id}:inc" value="${esc((S.score[2][r.id] || {}).inc ?? '')}" placeholder="0"></label>现金<label class="field"><i>$</i><input type="text" inputmode="numeric" data-pk="sc-2-${r.id}-cash" data-sc="2:${r.id}:cash" value="${esc((S.score[2][r.id] || {}).cash ?? '')}" placeholder="0"></label></div>`).join('')}</div>` : ''}
     <h2 class="h">排名与得分构成</h2>
     <div class="list rk">${R.rows.map(r => `
@@ -300,7 +302,41 @@ function mvpTab() {
     <h2 class="h">成就</h2>
     <div class="achs">${R.ach.map(a => `
       <div class="card ach" data-k="ach-${a.k}"><span class="medal">${a.ch}</span><div style="min-width:0"><div class="an">${a.name}</div><div class="ad">${a.desc}</div>
-        <div class="aw">${a.who.map(id => por(id, 'xs')).join('')}${a.who.length === 1 ? `<span class="fg" style="align-self:center;margin-left:3px">${esc(pname(a.who[0]))}</span>` : ''}</div></div></div>`).join('')}</div>`;
+        <div class="aw">${a.who.map(id => por(id, 'xs')).join('')}${a.who.length === 1 ? `<span class="fg" style="align-self:center;margin-left:3px">${esc(pname(a.who[0]))}</span>` : ''}</div></div></div>`).join('')}</div></div>`;
+}
+
+/* ---------- results as one long image ---------- */
+const loadScript = src => new Promise((ok, fail) => {
+  if (window.html2canvas) return ok();
+  const el = document.createElement('script');
+  el.src = src; el.onload = ok; el.onerror = () => fail(new Error('截图组件加载失败'));
+  document.head.appendChild(el);
+});
+// Renders the results tab (without buttons, inputs and notes) under a header naming the room and date.
+async function saveImage() {
+  ui.saving = true; render();
+  try {
+    await loadScript('vendor/html2canvas.min.js');
+    const canvas = await window.html2canvas($('#shot'), {
+      scale: Math.max(2, window.devicePixelRatio || 1), backgroundColor: '#efe4cb',
+      onclone: doc => {
+        const c = doc.getElementById('shot');
+        c.style.cssText = 'margin:0 -14px;padding:18px 14px 14px';   // grow outward so the content keeps its on-screen width
+        c.insertAdjacentHTML('afterbegin', `<div style="text-align:center;padding-bottom:6px"><div style="font:900 22px var(--serif);color:var(--red);letter-spacing:4px">工业革命 · 匹兹堡</div>
+          <div style="font:500 12px var(--sans);color:var(--ink2);margin-top:4px">终局结算 · 房间 ${code} · ${new Date().toLocaleDateString('zh-CN')}</div></div>`);
+        c.insertAdjacentHTML('beforeend', '<div style="text-align:center;font:500 11px var(--sans);color:var(--ink2);margin-top:16px">匹兹堡开局小助手 · pgh.leisurecat.cloud</div>');
+      }
+    });
+    showImage(canvas.toDataURL('image/jpeg', 0.92));
+  } catch (e) { toast('生成长图失败：' + e.message); }
+  ui.saving = false; render();
+}
+function showImage(url) {
+  const el = document.createElement('div');
+  el.className = 'shotv';
+  el.innerHTML = `<div class="sv-top"><span>长按图片保存到相册</span><a href="${url}" download="匹兹堡结算-${code}.jpg">下载</a><button type="button">关闭</button></div><img src="${url}" alt="结算长图">`;
+  el.querySelector('button').onclick = () => el.remove();
+  document.body.appendChild(el);
 }
 
 /* ---------- blind-bag draw (plays on every phone when someone shuffles) ---------- */
@@ -435,6 +471,8 @@ document.addEventListener('click', e => {
     case 'goto': ui.tab = d.tab; if (d.era) ui.era = +d.era; render(); window.scrollTo(0, 0); break;
     case 'era': ui.era = +d.era; render(); break;
     case 'tb': ui.tb = !ui.tb; render(); break;
+    case 'rn': ui.rn = !ui.rn; render(); break;
+    case 'save': if (!ui.saving) saveImage(); break;
     case 'plus': case 'minus': {
       draft[d.id] = String(Math.max(0, (num(draft[d.id]) ?? 0) + (d.act === 'plus' ? 1 : -1)));
       const input = document.querySelector(`[data-spent="${d.id}"]`);
