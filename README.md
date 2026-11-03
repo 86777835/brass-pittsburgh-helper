@@ -71,7 +71,7 @@
 
 ### 规则助手
 
-每个页面右下角都有「规则」按钮，点开就能用中文问规则，比如花费相同怎么排顺位、石油城怎么用。助手用 DeepSeek V4.1 Flash（`deepseek-flash`）逐字回答，只依据本站的讲解稿和常见问题作答，资料里没有的不会乱编。Flash 过载或出错时自动改由备用模型 DeepSeek V4 Pro（`deepseek-v4-pro`）回答，并在回答下方注明；30 秒还没开始回答就停止等待并提示稍后再问。
+每个页面右下角都有「规则」按钮，点开就能用中文问规则，比如花费相同怎么排顺位、石油城怎么用。助手用 DeepSeek V4.1 Flash（`deepseek-flash`）逐字回答，只依据本站的讲解稿和常见问题作答，资料里没有的不会乱编。Flash 过载、排队或出错时，依次改由备用模型回答，并在回答下方注明：先是 Cloudflare Workers AI 上的 Qwen3.8 27B（`@cf/qwen/qwen3.8-27b`，不依赖 DeepSeek 的服务器），再是 DeepSeek V4 Pro（`deepseek-v4-pro`）。每个模型 9 秒内须开始回答，否则换下一个；都不行就提示稍后再问。
 
 <p>
 <img src="docs/screenshots/chat.jpg" width="260" alt="规则助手">
@@ -122,7 +122,7 @@ node tests/test_room2.mjs   http://localhost:8799/ ./shots                # 4 �
 node tests/test_history.mjs http://localhost:8799/ ./shots --many-rooms   # 往期对局存档与搜索；房间多时首页按钮仍在首屏
 node tests/test_history.mjs https://你的域名/ ./shots --live              # 线上冒烟：打完一局再撤销，不留记录
 node tests/test_chat.mjs    http://localhost:8799/ ./shots --no-key       # 规则助手界面（未配置密钥时）
-node tests/test_chat.mjs    http://localhost:8799/ ./shots --mock-upstream # 备用模型切换（wrangler dev 需加 --var DEEPSEEK_API_KEY:fake --var DEEPSEEK_BASE:http://127.0.0.1:8790）
+node tests/test_chat.mjs    http://localhost:8799/ ./shots --mock-upstream # 备用模型切换（wrangler dev 需加 --var DEEPSEEK_API_KEY:fake --var DEEPSEEK_BASE:http://127.0.0.1:8790 --var CHAT_CF_MODEL:@cf/none/missing）
 node tests/test_chat.mjs    https://你的域名/ ./shots --live              # 规则助手线上实问一次
 node tools/screenshots.mjs  http://localhost:8799/ docs/screenshots       # 重新生成 README 截图（需空的本地数据）
 ```

@@ -72,7 +72,7 @@ async function ask(q) {
     if (!text) throw new Error('没有收到回答，请再问一次');
     msgs.push({ role: 'assistant', content: text });
     const fb = r.headers.get('x-chat-fallback');   // the newest model was busy and a backup answered
-    if (fb) out.insertAdjacentHTML('beforeend', `<small class="cfb">DeepSeek V4.1 Flash 正忙，本条由备用模型 ${esc(fb)} 回答</small>`);
+    if (fb) out.insertAdjacentHTML('beforeend', `<small class="cfb">主模型 DeepSeek V4.1 Flash 正忙，本条由备用模型 ${esc(fb)} 回答</small>`);
   } catch (e) {
     msgs.pop();   // drop the unanswered question so the next request stays well formed
     out.classList.add('err');
