@@ -3,6 +3,9 @@ const SUGGEST = ['花费相同怎么排下一轮顺位？', '贷款有什么限�
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmt = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
 
+// Browser messages for a dropped connection (request or mid-answer): Chrome, Safari, Firefox.
+const NET_ERRS = ['Failed to fetch', 'network error', 'Load failed', 'NetworkError when attempting to fetch resource.'];
+
 const msgs = [];   // conversation sent to the server: {role, content}
 let busy = false;
 
@@ -46,7 +49,7 @@ async function ask(q) {
   const out = bubble('a', '<i class="cdots"><b></b><b></b><b></b></i>');
   let text = '';
   try {
-    const r = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages: msgs }) });
+    const r = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages: msgs.slice(-10) }) });   // the server keeps only the last 10 and rejects over 20
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `出错了（${r.status}）`);
     const reader = r.body.getReader(), dec = new TextDecoder();
     let buf = '';
@@ -69,7 +72,7 @@ async function ask(q) {
   } catch (e) {
     msgs.pop();   // drop the unanswered question so the next request stays well formed
     out.classList.add('err');
-    out.innerHTML = (text ? fmt(text) + '<br>' : '') + esc(e.message === 'Failed to fetch' ? '网络连接失败，请检查网络后再试' : e.message);
+    out.innerHTML = (text ? fmt(text) + '<br>' : '') + esc(NET_ERRS.includes(e.message) ?'网络连接失败，请检查网络后再试' : e.message);
   }
   busy = false; sendBtn.disabled = false;
 }

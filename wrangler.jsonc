@@ -13,5 +13,6 @@
     "bindings": [{ "name": "ROOM", "class_name": "Room" }, { "name": "LOBBY", "class_name": "Lobby" }, { "name": "ARCHIVE", "class_name": "Archive" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }, { "tag": "v2", "new_sqlite_classes": ["Lobby"] }, { "tag": "v3", "new_sqlite_classes": ["Archive"] }],
+  "observability": { "enabled": true },
   "routes": [{ "pattern": "pgh.leisurecat.cloud", "custom_domain": true }]
 }

@@ -63,6 +63,15 @@ if (mode === '--live') {
   eq('failed question not sent again', bodies[0].messages.length, 1);
   await page.fill('.cin textarea', '那贷款呢？'); await page.click('.cin button'); await wait(500);
   eq('history sent with next question', bodies[1].messages.map(m => m.role), ['user', 'assistant', 'user']);
+  // a long chat: past 10 questions only the last 10 messages go out (the server rejects over 20)
+  for (let i = 0; i < 10; i++) {
+    const n = bodies.length;
+    await page.fill('.cin textarea', `第${i + 3}问`); await page.press('.cin textarea', 'Enter');
+    await page.waitForFunction(n => !document.querySelector('.cin button').disabled && document.querySelectorAll('.cm.a').length >= n + 2, n);
+  }
+  const lastBody = bodies.at(-1).messages;
+  eq('12th question sends last 10 messages', [lastBody.length, lastBody.at(-1).content], [10, '第12问']);
+  eq('no error in a long chat', await page.$$eval('.cm.err', l => l.length), 1);   // only the not-configured one at the start
   await page.screenshot({ path: out + '/chat_panel.png' });
   await page.goto(base); await page.click('.cfab'); await wait(400);
   await page.screenshot({ path: out + '/chat_welcome.png' });
