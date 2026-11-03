@@ -89,7 +89,8 @@ async function chat(req, env) {
   });
   if (!r.ok) {
     console.log('deepseek error', r.status, (await r.text()).slice(0, 500));
-    return Response.json({ error: `规则助手暂时不可用（${r.status}），请稍后再试` }, { status: 502 });
+    const busy = r.status === 503 || r.status === 429;   // DeepSeek overloaded / throttled
+    return Response.json({ error: busy ? `DeepSeek 服务器正忙（${r.status}），请过一两分钟再问` : `规则助手暂时不可用（${r.status}），请稍后再试` }, { status: 502 });
   }
   return new Response(r.body, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache' } });
 }
