@@ -137,6 +137,14 @@ if (mode === '--live') {
   eq('gives up at 30 s with busy message', (await p2.textContent('.cm.err')).includes('30 秒还没开始回答'), true);
   eq('can ask again after timeout', await p2.isDisabled('.cin button'), false);
   await p2.close();
+  // dropped connection: the raw browser error is shown and reported to the server log
+  const p3 = await (await b.newContext({ viewport: { width: 375, height: 667 } })).newPage();
+  const logs = []; p3.on('request', r => r.url().endsWith('/api/chat-log') && logs.push(JSON.parse(r.postData())));
+  await p3.route('**/api/chat', r => r.abort('failed'));
+  await p3.goto(base); await p3.click('.cfab'); await p3.click('.csug button'); await p3.waitForSelector('.cm.err'); await wait(300);
+  eq('network error shows the raw error', (await p3.textContent('.cm.err')).startsWith('网络连接失败，请检查网络后再试（TypeError: Failed to fetch）'), true);
+  eq('network error reported', logs.map(l => [l.err, l.got]), [['TypeError: Failed to fetch', 0]]);
+  await p3.close();
   await page.goto(base); await page.click('.cfab'); await wait(400);
   await page.screenshot({ path: out + '/chat_welcome.png' });
   await page.click('.cx'); await wait(200);

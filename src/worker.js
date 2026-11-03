@@ -20,6 +20,10 @@ export default {
     }
 
     if (url.pathname === '/api/chat' && req.method === 'POST') return chat(req, env);
+    if (url.pathname === '/api/chat-log' && req.method === 'POST') {   // a reply the page lost mid-way (see chat.js)
+      console.log('chat client error', (await req.text()).slice(0, 300), req.headers.get('user-agent')?.slice(-60), req.cf?.colo);
+      return new Response(null, { status: 204 });
+    }
     if (url.pathname === '/api/rooms' && req.method === 'GET') return lobby(env).fetch('https://lobby/list');
     if (url.pathname === '/api/games' && req.method === 'GET') return archive(env).fetch('https://archive/list' + url.search);
 

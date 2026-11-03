@@ -47,12 +47,14 @@ async function ask(q) {
   bubble('u', fmt(q));
   msgs.push({ role: 'user', content: q });
   const out = bubble('a', '<i class="cdots"><b></b><b></b><b></b></i>');
-  let text = '';
+  let text = '', fb = null;
+  const t0 = Date.now();
   // When DeepSeek is overloaded it queues the request and sends nothing; stop waiting if no text in 30 s.
   const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 30000);
   try {
     const r = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages: msgs.slice(-10) }), signal: ctl.signal });   // the server keeps only the last 10 and rejects over 20
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `出错了（${r.status}）`);
+    fb = r.headers.get('x-chat-fallback');   // the newest model was busy and a backup answered
     const reader = r.body.getReader(), dec = new TextDecoder();
     let buf = '';
     for (;;) {
@@ -71,13 +73,15 @@ async function ask(q) {
     }
     if (!text) throw new Error('没有收到回答，请再问一次');
     msgs.push({ role: 'assistant', content: text });
-    const fb = r.headers.get('x-chat-fallback');   // the newest model was busy and a backup answered
     if (fb) out.insertAdjacentHTML('beforeend', `<small class="cfb">主模型 DeepSeek V4.1 Flash 正忙，本条由备用模型 ${esc(fb)} 回答</small>`);
   } catch (e) {
     msgs.pop();   // drop the unanswered question so the next request stays well formed
     out.classList.add('err');
+    const net = NET_ERRS.includes(e.message);
     out.innerHTML = (text ? fmt(text) + '<br>' : '') + esc(ctl.signal.aborted ? 'DeepSeek 服务器正忙，30 秒还没开始回答，请过一两分钟再问'
-      : NET_ERRS.includes(e.message) ? '网络连接失败，请检查网络后再试' : e.message);
+      : net ? `网络连接失败，请检查网络后再试（${e.name}: ${e.message}）` : e.message);
+    // Dropped connections are hard to see from the server: report what the page saw to the server log.
+    if (net) navigator.sendBeacon?.('/api/chat-log', JSON.stringify({ err: `${e.name}: ${e.message}`, got: text.length, ms: Date.now() - t0, fb }));
   }
   clearTimeout(timer);
   busy = false; sendBtn.disabled = false;
