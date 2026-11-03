@@ -1,45 +1,125 @@
+<div align="center">
+
 # 匹兹堡开局小助手
 
-快速开局，计分不烧心。
+**快速开局，计分不烧心**
 
-《工业革命：匹兹堡》（Brass: Pittsburgh）桌游的多人房间工具，线上地址：https://pgh.leisurecat.cloud
+《工业革命：匹兹堡》（Brass: Pittsburgh）线下对局的多人同步工具：排顺位、记花费、两时代计分、终局结算一站搞定。
 
-- 一桌人进同一个房间，所有手机实时同步；首页列出正在进行的房间，点一下即可加入
-- 顺位：每轮记录花费，结算时按花钱从少到多排下一轮顺位，同额保持原相对顺序；两个时代各 8 轮自动推进
-- 计分：两个时代的计分条、火车链接、产业板块、多相交流发电机、机车工厂，数字键盘支持加减
-- 结算：MVP、得分构成、成就；平分按收入等级、再按现金；终局仍可改玩家名，一键生成结算长图（html2canvas，`public/vendor/`）
-- 往期对局：每局结束自动存档（Durable Object `Archive`），`/history` 可按玩家名、角色或房间码搜索
-- 新手教程：`/guide`，规则讲解视频（存放在 R2 存储桶 `pgh-media`，经 `/media/rules.mp4` 播放）、23 节图文讲解和 31 条常见问题（依据官方规则书整理）
+一桌人用手机扫码进同一个房间，所有操作实时同步，无需下载、无需注册。
 
-规则依据官方规则书 v2026.01。非官方玩家工具，人物肖像为重新绘制的插画。
+**[立即使用 → pgh.leisurecat.cloud](https://pgh.leisurecat.cloud)**
 
-## 结构
+<img src="docs/screenshots/landing.jpg" width="260" alt="首页">
 
-| 路径 | 说明 |
+</div>
+
+---
+
+## 功能一览
+
+### 开局：选人、选色、盲抽顺位
+
+2–4 人局。每位玩家填名字、选颜色和角色，角色和颜色按实物板块绑定（黄：布莱 / 弗里克，蓝：特斯拉 / 沃克，橙：卡内基 / 比塞尔，紫：洛克菲勒 / 摩根）。点「随机排序」，所有手机同时播放盲抽袋动画，抽出首轮顺位。
+
+<p>
+<img src="docs/screenshots/setup.jpg" width="260" alt="开局设置">
+<img src="docs/screenshots/draw.jpg" width="260" alt="盲抽顺位动画">
+</p>
+
+### 对局：每轮记花费，自动排下一轮顺位
+
+每轮输入每人花了多少钱，结算时按花钱从少到多排出下一轮顺位，同额保持原来的相对顺序（规则书 v2026.01）。两个时代各 8 轮自动推进，提示首轮只做 1 个行动、最后一轮不结算收入。结算错了可以撤销，断线重连自动追上进度。
+
+<p>
+<img src="docs/screenshots/order.jpg" width="260" alt="顺位与花费">
+</p>
+
+### 计分：两个时代分开填，算式键盘
+
+每个时代一张竖向计分表，一列一位玩家：计分条、铁路、产业、多相交流发电机、机车厂。铁路和产业逐项累加，数字键盘支持加减算式，合计实时更新。
+
+<p>
+<img src="docs/screenshots/score.jpg" width="260" alt="计分表">
+</p>
+
+### 结算：MVP、得分构成、成就，一键存长图
+
+自动算出排名（同分先比收入等级、再比现金），展示 MVP、每人得分构成（行动分 / 铁路 / 产业 / 明珠）和 9 种趣味成就。终局时仍可修改玩家名，一键把整页结算生成长图，长按保存到相册。
+
+<p>
+<img src="docs/screenshots/results.jpg" width="260" alt="结算页">
+<img src="docs/screenshots/long.jpg" width="260" alt="结算长图">
+</p>
+
+### 往期对局
+
+每局结束自动存档，可按玩家名、角色或房间码搜索，展开查看每人的得分明细。
+
+<p>
+<img src="docs/screenshots/history.jpg" width="260" alt="往期对局">
+</p>
+
+### 新手教程与常见问题
+
+9 分半规则讲解视频、23 节图文讲解，加上依据官方规则书整理的 31 条常见问题，新手开局前刷一遍就能上桌。
+
+<p>
+<img src="docs/screenshots/guide.jpg" width="260" alt="新手教程">
+<img src="docs/screenshots/faq.jpg" width="260" alt="常见问题">
+</p>
+
+---
+
+## 技术实现
+
+纯前端页面 + Cloudflare Workers，没有构建步骤，没有框架。
+
+| 部分 | 说明 |
 |---|---|
-| `public/` | 页面（静态资源）：`index.html`、`app.js`、`style.css`、`img/` |
-| `public/logic.js` | 规则与状态逻辑，页面和服务端共用 |
-| `src/worker.js` | Cloudflare Worker：建房接口、`Room`（每个房间一个 Durable Object，WebSocket 同步）、`Lobby`（房间列表）、`Archive`（往期对局） |
-| `wrangler.jsonc` | 部署配置，自定义域名 `pgh.leisurecat.cloud` |
-| `tests/` | Playwright 多手机测试 |
-| `tools/` | 生成新手教程页：`python3 tools/build_guide.py tools/讲解稿.md public/guide.html tools/faq.json`（讲解稿 + 常见问题数据） |
+| `public/` | 页面静态资源：`index.html`、`app.js`、`style.css`、`img/`、教程页 `guide.html`、往期对局 `history.html` |
+| `public/logic.js` | 规则与状态逻辑（顺位、计分、成就），页面和服务端共用同一份代码，服务端权威校验 |
+| `src/worker.js` | Cloudflare Worker：建房接口；`Room`（每个房间一个 Durable Object，WebSocket 实时同步）；`Lobby`（首页房间列表）；`Archive`（往期对局存档）；R2 视频流（支持拖动进度） |
+| `public/vendor/` | [html2canvas](https://github.com/niklasvh/html2canvas) 1.4.1（MIT），用于生成结算长图 |
+| `tools/` | 教程页生成脚本、讲解稿与常见问题数据、README 截图脚本 |
+| `tests/` | Playwright 多手机端到端测试 |
 
-## 开发与部署
+## 本地开发与部署
+
+需要 Node.js 和 [Wrangler](https://developers.cloudflare.com/workers/wrangler/)。
 
 ```bash
-wrangler dev --port 8799     # 本地运行
-wrangler deploy              # 部署到 Cloudflare
+wrangler dev --port 8799     # 本地运行，打开 http://localhost:8799
+wrangler deploy              # 部署到你自己的 Cloudflare 账号
+```
+
+自己部署时：
+- **域名**：去掉或改掉 `wrangler.jsonc` 里的自定义域名 `pgh.leisurecat.cloud`。
+- **教程视频**（可选）：视频不在仓库里，要用的话新建 R2 存储桶 `pgh-media`，上传 `rules.mp4`。
+
+重新生成教程页：
+
+```bash
+python3 tools/build_guide.py tools/讲解稿.md public/guide.html tools/faq.json
 ```
 
 ## 测试
 
-需要本机安装 Chrome 和 `playwright-core`（`npm i playwright-core`）。
+需要本机安装 Chrome，以及 `npm i playwright-core`。
 
 ```bash
-node tests/test_room.mjs  https://pgh.leisurecat.cloud/ ./shots   # 双手机完整 16 轮
-node tests/test_room2.mjs https://pgh.leisurecat.cloud/ ./shots   # 4 人局、小屏、加入、撤销、断线、平分等
-node tests/test_history.mjs http://localhost:8799/ ./shots --many-rooms   # 往期对局存档、搜索、撤销/重开；房间多时首页按钮仍在首屏
-node tests/test_history.mjs https://pgh.leisurecat.cloud/ ./shots --live  # 线上冒烟：打完一局再撤销，不留记录
+node tests/test_room.mjs    http://localhost:8799/ ./shots                # 双手机完整 16 轮
+node tests/test_room2.mjs   http://localhost:8799/ ./shots                # 4 人局、小屏、撤销、断线、平分、改名、长图等
+node tests/test_history.mjs http://localhost:8799/ ./shots --many-rooms   # 往期对局存档与搜索；房间多时首页按钮仍在首屏
+node tests/test_history.mjs https://你的域名/ ./shots --live              # 线上冒烟：打完一局再撤销，不留记录
+node tools/screenshots.mjs  http://localhost:8799/ docs/screenshots       # 重新生成 README 截图（需空的本地数据）
 ```
 
-打完整局的测试会在往期对局里留下记录，请对本地 `wrangler dev` 运行（把上面前两条的地址换成 `http://localhost:8799/`）；线上只跑 `--live`。
+打完整局的测试会在往期对局里留下记录，所以请对本地 `wrangler dev` 运行；线上只跑 `--live`。
+
+## 声明
+
+- 本项目是非官方的玩家工具，不提供游戏本体。线下对局仍需实体《工业革命：匹兹堡》。
+- 规则依据官方规则书 v2026.01，常见问题由规则书整理，并非官方 FAQ。
+- 游戏名称、规则及原作美术的权利归原出版方所有。人物肖像为重新绘制的插画。
+- 代码以 [MIT](LICENSE) 许可开源。
