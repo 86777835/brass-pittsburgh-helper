@@ -36,8 +36,9 @@ if (mode === '--mock-upstream') {
     req.on('end', () => {
       const { model } = JSON.parse(body); seen.push(model);
       const st = reply[model] ?? 200;
-      if (st === 'queue') {   // like an overloaded DeepSeek: accepted, then only keep-alive comments
+      if (st === 'queue' || st === 'stall') {   // like an overloaded DeepSeek: only keep-alive comments, before or mid-answer
         res.writeHead(200, { 'content-type': 'text/event-stream' });
+        if (st === 'stall') res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: `${model} 答了一半` } }] })}\n\n`);
         const t = setInterval(() => res.write(': keep-alive\n\n'), 1000);
         return res.on('close', () => clearInterval(t));
       }
@@ -73,6 +74,15 @@ if (mode === '--mock-upstream') {
   eq('both queueing → busy message before the page gives up', [await askOnce('七', { 'deepseek-flash': 'queue', 'deepseek-v4-pro': 'queue' }), seen],
     [[true, 'AI 服务器都在忙，请过一两分钟再问'], ['deepseek-flash', 'deepseek-v4-pro']]);
   console.log('  took', Date.now() - t1, 'ms');
+  const t2 = Date.now();
+  eq('flash stalls mid-answer → partial dropped, v4-pro answers from the start',
+    [await askOnce('八', { 'deepseek-flash': 'stall' }), seen],
+    [[false, 'deepseek-v4-pro 的回答主模型 DeepSeek V4.1 Flash 正忙，本条由备用模型 DeepSeek V4 Pro 回答'], ['deepseek-flash', 'deepseek-v4-pro']]);
+  console.log('  took', Date.now() - t2, 'ms');
+  await wait(15000);   // nine questions: stay under the server's 8-per-minute limit
+  const [err9, text9] = await askOnce('九', { 'deepseek-flash': 'stall', 'deepseek-v4-pro': 'stall' });
+  eq('stalled partial not kept as history', bodies.at(-1).messages.slice(-3).map(m => m.content), ['八', 'deepseek-v4-pro 的回答', '九']);
+  eq('every model stalls → partial kept, busy message', [err9, text9, seen], [true, 'deepseek-v4-pro 答了一半AI 服务器都在忙，请过一两分钟再问', ['deepseek-flash', 'deepseek-v4-pro']]);
   await page.screenshot({ path: out + '/chat_fallback.png' });
   await b.close(); srv.close();
   console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);

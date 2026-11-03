@@ -67,7 +67,10 @@ async function ask(q) {
         if (!line.startsWith('data:')) continue;
         const data = line.slice(5).trim();
         if (data === '[DONE]') continue;
-        const piece = JSON.parse(data).choices?.[0]?.delta?.content;
+        const j = JSON.parse(data);
+        if (j.error) throw new Error(j.error);
+        if (j.reset) { text = ''; fb = j.reset; out.innerHTML = '<i class="cdots"><b></b><b></b><b></b></i>'; continue; }   // the model stalled; the next one starts over
+        const piece = j.choices?.[0]?.delta?.content;
         if (piece) { clearTimeout(timer); text += piece; out.innerHTML = fmt(text); log.scrollTop = log.scrollHeight; }
       }
     }
