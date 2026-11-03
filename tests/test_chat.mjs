@@ -59,8 +59,8 @@ if (mode === '--mock-upstream') {
     return page.$$eval('.cm.a', l => [l.at(-1).className.includes('err'), l.at(-1).textContent]);
   };
   eq('flash answers, no note', [await askOnce('一', {}), seen], [[false, 'deepseek-flash 的回答'], ['deepseek-flash']]);
-  eq('flash busy, cloudflare fails → v4-pro answers with a note', [await askOnce('二', { 'deepseek-flash': 503 }), seen],
-    [[false, 'deepseek-v4-pro 的回答主模型 DeepSeek V4.1 Flash 正忙，本条由备用模型 DeepSeek V4 Pro 回答'], ['deepseek-flash', 'deepseek-v4-pro']]);
+  eq('flash busy, cloudflare fails → v4-pro answers, no model named', [await askOnce('二', { 'deepseek-flash': 503 }), seen],
+    [[false, 'deepseek-v4-pro 的回答'], ['deepseek-flash', 'deepseek-v4-pro']]);
   eq('flash 500 → v4-pro', [(await askOnce('三', { 'deepseek-flash': 500 }))[0], seen], [false, ['deepseek-flash', 'deepseek-v4-pro']]);
   eq('note not sent back as history', bodies.at(-1).messages.at(-2).content, 'deepseek-v4-pro 的回答');
   eq('every model fails, none busy → unavailable with each status', [await askOnce('四', { 'deepseek-flash': 401, 'deepseek-v4-pro': 401 }), seen],
@@ -77,7 +77,7 @@ if (mode === '--mock-upstream') {
   const t2 = Date.now();
   eq('flash stalls mid-answer → partial dropped, v4-pro answers from the start',
     [await askOnce('八', { 'deepseek-flash': 'stall' }), seen],
-    [[false, 'deepseek-v4-pro 的回答主模型 DeepSeek V4.1 Flash 正忙，本条由备用模型 DeepSeek V4 Pro 回答'], ['deepseek-flash', 'deepseek-v4-pro']]);
+    [[false, 'deepseek-v4-pro 的回答'], ['deepseek-flash', 'deepseek-v4-pro']]);
   console.log('  took', Date.now() - t2, 'ms');
   await wait(15000);   // nine questions: stay under the server's 8-per-minute limit
   const [err9, text9] = await askOnce('九', { 'deepseek-flash': 'stall', 'deepseek-v4-pro': 'stall' });

@@ -59,7 +59,7 @@ async function serveMedia(env, key, req) {
 
 // Rules assistant: answers from the tutorial script and FAQ (both written from the official rulebook) via DeepSeek.
 // Tried in order. The next one answers when the one before is overloaded, queueing, erroring, unreachable or stalls mid-answer;
-// the page then says which model answered (x-chat-fallback header, or a reset event mid-stream), and the log records it.
+// the log records which one answered (also sent to the page as an x-chat-fallback header or a reset event mid-stream).
 // The Cloudflare model runs on Workers AI (free plan), so it still works when DeepSeek's own servers are overloaded.
 const CHAT_MODELS = [
   { id: 'deepseek-flash', name: 'DeepSeek V4.1 Flash' },
