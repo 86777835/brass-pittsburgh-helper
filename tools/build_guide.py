@@ -48,6 +48,7 @@ open(out, 'w').write(f'''<!doctype html>
 <a class="btn" href="./">返回首页</a>
 <footer>依据官方规则书 v2026.01 · 非官方玩家工具</footer>
 </div>
+<script type="module" src="chat.js"></script>
 </body>
 </html>
 ''')

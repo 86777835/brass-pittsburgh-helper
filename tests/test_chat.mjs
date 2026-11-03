@@ -1,0 +1,79 @@
+// Rules assistant. Usage: node tests/test_chat.mjs <base-url> <shots-dir> [--no-key | --fake-key | --live]
+//   --no-key   local `wrangler dev` without DEEPSEEK_API_KEY: panel UI, streamed answer (mocked /api/chat), "not configured" error
+//   --fake-key local `wrangler dev --var DEEPSEEK_API_KEY:fake`: request checks, upstream error, rate limit
+//   --live     the deployed site with a real key: one real question
+import { chromium } from 'playwright-core';
+const [base, out, mode] = process.argv.slice(2);
+const api = p => new URL(p, base).href;
+let fails = 0;
+const eq = (name, got, want) => { const ok = JSON.stringify(got) === JSON.stringify(want); if (!ok) fails++; console.log(ok ? 'PASS' : 'FAIL', name, ok ? '' : `got ${JSON.stringify(got)} want ${JSON.stringify(want)}`); };
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const post = body => fetch(api('/api/chat'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+const q = content => ({ messages: [{ role: 'user', content }] });
+
+if (mode === '--fake-key') {
+  eq('empty messages rejected', (await post({ messages: [] })).status, 400);
+  eq('last message must be the user', (await post({ messages: [{ role: 'assistant', content: 'hi' }] })).status, 400);
+  eq('system role rejected', (await post({ messages: [{ role: 'system', content: 'x' }, { role: 'user', content: 'hi' }] })).status, 400);
+  eq('question over 500 chars rejected', (await post(q('长'.repeat(501)))).status, 400);
+  const r = await post(q('贷款有什么限制？'));
+  const j = await r.json();
+  console.log('upstream with fake key:', r.status, j.error);
+  eq('upstream failure reported as 502', r.status, 502);
+  const codes = [];
+  for (let i = 0; i < 10; i++) codes.push((await post({ messages: [] })).status);
+  eq('rate limit kicks in', codes.includes(429), true);
+  console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exit(fails ? 1 : 0);
+}
+
+const b = await chromium.launch({ channel: 'chrome' });
+const page = await (await b.newContext({ viewport: { width: 375, height: 667 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })).newPage();
+const errs = []; page.on('pageerror', e => errs.push(e.message));
+const lastAnswer = () => page.$$eval('.cm.a', l => l.at(-1).textContent);
+await page.goto(base); await page.waitForSelector('.cfab');
+eq('button shown bottom right', await page.isVisible('.cfab'), true);
+await page.click('.cfab'); await wait(200);
+eq('panel opens', await page.isVisible('.cpanel'), true);
+eq('button hidden while open', await page.isVisible('.cfab'), false);
+
+if (mode === '--live') {
+  await page.fill('.cin textarea', '花费相同怎么排下一轮顺位？'); await page.press('.cin textarea', 'Enter');
+  await page.waitForFunction(() => !document.querySelector('.cin button').disabled, null, { timeout: 60000 });
+  const a = await lastAnswer();
+  console.log('answer:', a);
+  eq('real answer, no error', await page.$('.cm.err'), null);
+  eq('answer mentions order by spending', /少|顺序|相对/.test(a), true);
+  await page.screenshot({ path: out + '/chat_live.png' });
+} else {
+  // not configured: the error shows in the chat and the question can be asked again
+  await page.click('.csug button'); await page.waitForSelector('.cm.err');
+  eq('not-configured error shown', (await page.textContent('.cm.err')).includes('还没有配置好'), true);
+  eq('suggestions removed after asking', await page.$('.csug'), null);
+  // streamed answer (mocked endpoint): pieces join, **bold** renders, history goes along with the next question
+  const bodies = [];
+  await page.route('**/api/chat', async route => {
+    bodies.push(JSON.parse(route.request().postData()));
+    const ev = s => `data: ${JSON.stringify({ choices: [{ delta: { content: s } }] })}\n\n`;
+    await route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream' }, body: ev('花得**最少**的') + ev('先行动；\n同额保持') + ev('原相对顺序。') + 'data: [DONE]\n\n' });
+  });
+  await page.fill('.cin textarea', '花费相同怎么办？'); await page.press('.cin textarea', 'Enter');
+  await page.waitForFunction(() => [...document.querySelectorAll('.cm.a')].at(-1)?.textContent.includes('原相对顺序'));
+  eq('streamed answer joined', await lastAnswer(), '花得最少的先行动；同额保持原相对顺序。');
+  eq('bold rendered', await page.$$eval('.cm.a', l => l.at(-1).querySelector('b').textContent), '最少');
+  eq('failed question not sent again', bodies[0].messages.length, 1);
+  await page.fill('.cin textarea', '那贷款呢？'); await page.click('.cin button'); await wait(500);
+  eq('history sent with next question', bodies[1].messages.map(m => m.role), ['user', 'assistant', 'user']);
+  await page.screenshot({ path: out + '/chat_panel.png' });
+  await page.goto(base); await page.click('.cfab'); await wait(400);
+  await page.screenshot({ path: out + '/chat_welcome.png' });
+  await page.click('.cx'); await wait(200);
+  eq('panel closes', [await page.isVisible('.cpanel'), await page.isVisible('.cfab')], [false, true]);
+  await page.goto(api('/guide')); await page.waitForSelector('.cfab');
+  eq('button on guide page', await page.isVisible('.cfab'), true);
+  await page.goto(api('/history')); await page.waitForSelector('.cfab');
+  eq('button on history page', await page.isVisible('.cfab'), true);
+}
+eq('no page errors', errs, []);
+await b.close();
+console.log(fails ? `${fails} FAILED` : 'ALL PASS');
+process.exit(fails ? 1 : 0);

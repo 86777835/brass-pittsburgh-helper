@@ -1,0 +1,75 @@
+// Rules assistant: a floating button (bottom right) that opens a chat panel. Answers stream from /api/chat.
+const SUGGEST = ['花费相同怎么排下一轮顺位？', '贷款有什么限制？', '石油城怎么建、怎么用？', '时代结束怎么计分？'];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+
+const msgs = [];   // conversation sent to the server: {role, content}
+let busy = false;
+
+document.body.classList.add('has-chat');
+document.body.insertAdjacentHTML('beforeend', `
+<button class="cfab" type="button" aria-label="打开规则助手"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 3C6.5 3 2 6.6 2 11c0 2.4 1.3 4.6 3.4 6.1L4.6 21l4.3-2.4c1 .3 2 .4 3.1.4 5.5 0 10-3.6 10-8s-4.5-8-10-8zm-4 9.3a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm4 0a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm4 0a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6z"/></svg>规则</button>
+<div class="cpanel hidden" role="dialog" aria-label="规则助手">
+  <div class="chd"><span class="cav">规</span><div><b>匹兹堡规则助手</b><span><i class="con"></i>依据规则书讲解与常见问题作答</span></div><button class="cx" type="button" aria-label="关闭">×</button></div>
+  <div class="band"></div>
+  <div class="clog">
+    <div class="cwel"><img src="img/hero.jpg" alt=""><div><b>有规则问题，尽管问</b><span>建造、运输、贷款、计分……桌上起了争议也可以问我</span></div></div>
+    <div class="csug"><em>大家常问</em>${SUGGEST.map(q => `<button type="button">${q}</button>`).join('')}</div>
+  </div>
+  <form class="cin"><textarea rows="1" maxlength="500" placeholder="问规则，比如：贷款有什么限制？" enterkeyhint="send"></textarea><button type="submit" aria-label="发送"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.1 2-12.1 2z"/></svg></button></form>
+  <div class="cfoot">AI 回答仅供参考，以官方规则书为准</div>
+</div>`);
+
+const $c = s => document.querySelector(s);
+const fab = $c('.cfab'), panel = $c('.cpanel'), log = $c('.clog'), form = $c('.cin'), box = form.querySelector('textarea'), sendBtn = form.querySelector('button');
+const open = on => { panel.classList.toggle('hidden', !on); fab.classList.toggle('hidden', on); if (on) box.focus(); };
+fab.onclick = () => open(true);
+$c('.cx').onclick = () => open(false);
+$c('.csug').onclick = e => { const b = e.target.closest('button'); if (b) ask(b.textContent); };
+form.onsubmit = e => { e.preventDefault(); ask(box.value); };
+box.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask(box.value); } };
+
+// One message row; assistant rows carry the avatar. Returns the bubble.
+function bubble(cls, html) {
+  log.insertAdjacentHTML('beforeend', `<div class="cr ${cls}">${cls === 'a' ? '<span class="cav sm">规</span>' : ''}<div class="cm ${cls}">${html}</div></div>`);
+  log.scrollTop = log.scrollHeight;
+  return log.lastElementChild.lastElementChild;
+}
+
+async function ask(q) {
+  q = q.trim();
+  if (!q || busy) return;
+  busy = true; sendBtn.disabled = true; box.value = '';
+  $c('.csug')?.remove();
+  bubble('u', fmt(q));
+  msgs.push({ role: 'user', content: q });
+  const out = bubble('a', '<i class="cdots"><b></b><b></b><b></b></i>');
+  let text = '';
+  try {
+    const r = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages: msgs }) });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `出错了（${r.status}）`);
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!line.startsWith('data:')) continue;
+        const data = line.slice(5).trim();
+        if (data === '[DONE]') continue;
+        const piece = JSON.parse(data).choices?.[0]?.delta?.content;
+        if (piece) { text += piece; out.innerHTML = fmt(text); log.scrollTop = log.scrollHeight; }
+      }
+    }
+    if (!text) throw new Error('没有收到回答，请再问一次');
+    msgs.push({ role: 'assistant', content: text });
+  } catch (e) {
+    msgs.pop();   // drop the unanswered question so the next request stays well formed
+    out.classList.add('err');
+    out.innerHTML = (text ? fmt(text) + '<br>' : '') + esc(e.message === 'Failed to fetch' ? '网络连接失败，请检查网络后再试' : e.message);
+  }
+  busy = false; sendBtn.disabled = false;
+}

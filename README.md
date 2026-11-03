@@ -69,6 +69,14 @@
 <img src="docs/screenshots/faq.jpg" width="260" alt="常见问题">
 </p>
 
+### 规则助手
+
+每个页面右下角都有「规则」按钮，点开就能用中文问规则，比如花费相同怎么排顺位、石油城怎么用。助手用 DeepSeek V4.1 Flash（`deepseek-flash`）逐字回答，只依据本站的讲解稿和常见问题作答，资料里没有的不会乱编。
+
+<p>
+<img src="docs/screenshots/chat.jpg" width="260" alt="规则助手">
+</p>
+
 ---
 
 ## 技术实现
@@ -79,7 +87,7 @@
 |---|---|
 | `public/` | 页面静态资源：`index.html`、`app.js`、`style.css`、`img/`、教程页 `guide.html`、往期对局 `history.html` |
 | `public/logic.js` | 规则与状态逻辑（顺位、计分、成就），页面和服务端共用同一份代码，服务端权威校验 |
-| `src/worker.js` | Cloudflare Worker：建房接口；`Room`（每个房间一个 Durable Object，WebSocket 实时同步）；`Lobby`（首页房间列表）；`Archive`（往期对局存档）；R2 视频流（支持拖动进度） |
+| `src/worker.js` | Cloudflare Worker：建房接口；`Room`（每个房间一个 Durable Object，WebSocket 实时同步）；`Lobby`（首页房间列表）；`Archive`（往期对局存档）；R2 视频流（支持拖动进度）；`/api/chat` 规则助手（DeepSeek 流式转发，按 IP 限流，密钥只存在服务端） |
 | `public/vendor/` | [html2canvas](https://github.com/niklasvh/html2canvas) 1.4.1（MIT），用于生成结算长图 |
 | `tools/` | 教程页生成脚本、讲解稿与常见问题数据、README 截图脚本 |
 | `tests/` | Playwright 多手机端到端测试 |
@@ -96,6 +104,7 @@ wrangler deploy              # 部署到你自己的 Cloudflare 账号
 自己部署时：
 - **域名**：去掉或改掉 `wrangler.jsonc` 里的自定义域名 `pgh.leisurecat.cloud`。
 - **教程视频**（可选）：视频不在仓库里，要用的话新建 R2 存储桶 `pgh-media`，上传 `rules.mp4`。
+- **规则助手**（可选）：运行 `wrangler secret put DEEPSEEK_API_KEY` 填入你的 DeepSeek API 密钥；不配置时助手会提示「还没有配置好」。
 
 重新生成教程页：
 
@@ -112,6 +121,8 @@ node tests/test_room.mjs    http://localhost:8799/ ./shots                # 双�
 node tests/test_room2.mjs   http://localhost:8799/ ./shots                # 4 人局、小屏、撤销、断线、平分、改名、长图等
 node tests/test_history.mjs http://localhost:8799/ ./shots --many-rooms   # 往期对局存档与搜索；房间多时首页按钮仍在首屏
 node tests/test_history.mjs https://你的域名/ ./shots --live              # 线上冒烟：打完一局再撤销，不留记录
+node tests/test_chat.mjs    http://localhost:8799/ ./shots --no-key       # 规则助手界面（未配置密钥时）
+node tests/test_chat.mjs    https://你的域名/ ./shots --live              # 规则助手线上实问一次
 node tools/screenshots.mjs  http://localhost:8799/ docs/screenshots       # 重新生成 README 截图（需空的本地数据）
 ```
 
