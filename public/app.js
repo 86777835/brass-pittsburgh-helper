@@ -24,7 +24,7 @@ const store = {
 
 let code = cleanCode(new URLSearchParams(location.search).get('r'));
 let S = null, noRoom = false, online = false, ws = null, queue = [], retry = 0;
-const ui = { tab: store.get('pgh-tab') || 'order', era: null, sheet: null, err: '', busy: false, rooms: null, tb: false, rn: false, saving: false };   // tb: tie-break inputs shown; rn: rename inputs shown on the results tab
+const ui = { tab: store.get('pgh-tab') || 'order', era: null, sheet: null, err: '', busy: false, rooms: null, tb: false, rn: false, saving: false, rv: null };   // tb: tie-break inputs shown; rn: rename inputs shown on the results tab; rv: rating form (reviewCard)
 // This phone's spend entries for the current round; sent to the room only when settling.
 let draft = {}, draftKey = '';
 function syncDraft() {
@@ -302,7 +302,39 @@ function mvpTab() {
     <h2 class="h">成就</h2>
     <div class="achs">${R.ach.map(a => `
       <div class="card ach" data-k="ach-${a.k}"><span class="medal">${a.ch}</span><div style="min-width:0"><div class="an">${a.name}</div><div class="ad">${a.desc}</div>
-        <div class="aw">${a.who.map(id => por(id, 'xs')).join('')}${a.who.length === 1 ? `<span class="fg" style="align-self:center;margin-left:3px">${esc(pname(a.who[0]))}</span>` : ''}</div></div></div>`).join('')}</div></div>`;
+        <div class="aw">${a.who.map(id => por(id, 'xs')).join('')}${a.who.length === 1 ? `<span class="fg" style="align-self:center;margin-left:3px">${esc(pname(a.who[0]))}</span>` : ''}</div></div></div>`).join('')}</div></div>
+    ${reviewCard()}`;
+}
+
+/* ---------- rating this game (stars + comment), shown on the hub boardgame.leisurecat.cloud ---------- */
+const REVIEW_API = 'https://boardgame.leisurecat.cloud/api/reviews';
+const STAR_TXT = ['点星星打分', '不推荐', '一般', '还行', '好玩', '超好玩'];
+const savedReview = () => { try { return JSON.parse(store.get('pgh-rv-' + code)) || {}; } catch { return {}; } };
+function reviewCard() {
+  if (ui.rv?.room !== code) ui.rv = { who: null, stars: 0, text: '', state: '', err: '', ...savedReview(), room: code };
+  const rv = ui.rv;
+  if (rv.state === 'sent') return `<div class="card rv" data-k="rv"><div class="rv-done">${'★'.repeat(rv.stars)}${'☆'.repeat(5 - rv.stars)}</div>
+    <p>谢谢 ${esc(pname(rv.who) || '')} 的评价！</p><div class="btns"><button class="btn ghost" data-act="rv-edit">修改评价</button><a class="btn navy" href="https://boardgame.leisurecat.cloud">看大家的评价</a></div></div>`;
+  return `<h2 class="h">给这款游戏打个分</h2><div class="card rv" data-k="rv">
+    <div class="rv-l">我是</div><div class="rv-who">${S.order.map(id => `<button class="${rv.who === id ? 'on' : ''}" data-act="rv-who" data-id="${id}">${por(id, 'xs')}<span>${esc(pname(id))}</span></button>`).join('')}</div>
+    <div class="rv-st">${[1, 2, 3, 4, 5].map(n => `<button class="${n <= rv.stars ? 'on' : ''}" data-act="rv-star" data-n="${n}" aria-label="${n} 星">★</button>`).join('')}<span>${STAR_TXT[rv.stars]}</span></div>
+    <textarea data-rv placeholder="说说这局的感受（可不填）" maxlength="300">${esc(rv.text)}</textarea>
+    <button class="btn" data-act="rv-send" ${!rv.who || !rv.stars || rv.state === 'sending' ? 'disabled' : ''}>${rv.state === 'sending' ? '提交中…' : '提交评价'}</button>
+    ${rv.err ? `<p class="err">${esc(rv.err)}</p>` : ''}
+    <p class="note">评价和玩家名会显示在「桌游小助手」首页，并计入这款游戏的整体评分。同一局再次提交会覆盖之前的评价。</p></div>`;
+}
+async function sendReview() {
+  const rv = ui.rv;
+  rv.state = 'sending'; rv.err = ''; render();
+  try {
+    const r = await fetch(REVIEW_API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ game: 'pgh', stars: rv.stars, name: pname(rv.who), text: rv.text, room: code }) });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `提交失败（${r.status}）`);
+    rv.state = 'sent';
+    store.set('pgh-rv-' + code, JSON.stringify({ who: rv.who, stars: rv.stars, text: rv.text, state: 'sent' }));
+  } catch (e) {
+    rv.state = ''; rv.err = e.message === 'Failed to fetch' ? '网络连接失败，请稍后再试' : e.message;
+  }
+  render();
 }
 
 /* ---------- results as one long image ---------- */
@@ -473,6 +505,10 @@ document.addEventListener('click', e => {
     case 'tb': ui.tb = !ui.tb; render(); break;
     case 'rn': ui.rn = !ui.rn; render(); break;
     case 'save': if (!ui.saving) saveImage(); break;
+    case 'rv-who': ui.rv.who = d.id; render(); break;
+    case 'rv-star': ui.rv.stars = +d.n; render(); break;
+    case 'rv-send': sendReview(); break;
+    case 'rv-edit': ui.rv.state = ''; render(); break;
     case 'plus': case 'minus': {
       draft[d.id] = String(Math.max(0, (num(draft[d.id]) ?? 0) + (d.act === 'plus' ? 1 : -1)));
       const input = document.querySelector(`[data-spent="${d.id}"]`);
@@ -496,7 +532,8 @@ document.addEventListener('click', e => {
 
 document.addEventListener('input', e => {
   const el = e.target, d = el.dataset;
-  if (d.name !== undefined) debounced(d.pk, () => send({ t: 'player', i: +d.name, name: el.value }));
+  if (d.rv !== undefined) ui.rv.text = el.value;
+  else if (d.name !== undefined) debounced(d.pk, () => send({ t: 'player', i: +d.name, name: el.value }));
   else if (d.spent) { draft[d.spent] = el.value; el.classList.toggle('bad', num(el.value) === null); ui.err = ''; } else if (d.sc) {
     const [era, id, key] = d.sc.split(':');
     debounced(d.pk, () => send({ t: 'score', era: +era, id, key, value: el.value }), 400);
