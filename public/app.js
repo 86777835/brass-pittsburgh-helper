@@ -137,8 +137,9 @@ function view() {
   if (!S) return `${hero()}<div class="wrap"><h2 class="h">正在连接房间 ${code}…</h2></div>`;
   return bar() + `<div class="wrap" data-k="stage-${S.stage === 'setup' ? 'setup' : 'play'}">` + (S.stage === 'setup' ? setupView() : playView()) + footer() + '</div>';
 }
-const hero = () => `<div class="hero" data-k="hero"><div class="en">工业革命 · 匹兹堡</div><h1>匹兹堡开局小助手</h1><div class="orn"></div></div><div class="band"></div>`;
-const bar = () => `<div class="bar" data-k="bar"><span class="ttl">工业革命 · 匹兹堡</span>
+const homeNav = () => `<button class="back-nav" data-act="leave" data-html2canvas-ignore>‹ 首页</button>`;
+const hero = () => `<div class="hero nav-hero" data-k="hero">${homeNav()}<div class="en">工业革命 · 匹兹堡</div><h1>匹兹堡开局小助手</h1><div class="orn"></div></div><div class="band"></div>`;
+const bar = () => `<div class="bar" data-k="bar">${homeNav()}<span class="ttl">工业革命 · 匹兹堡</span>
   <button class="room" data-act="share"><small>房间</small>${code}<small>邀请</small></button><span class="conn ${online ? 'on' : ''}" title="${online ? '已连接' : '重新连接中'}"></span></div>`;
 const footer = () => '';
 
@@ -159,7 +160,7 @@ function landing() {
       <button class="card lobby" data-act="rejoin" data-code="${c}" data-k="lb-${c}">
         <span class="lc">${c}${tag(c)}</span><span class="lp"></span><span class="ls"><small>点击进入</small></span>
       </button>`).join('') : '<div class="empty">暂无进行中的房间</div>';
-  return `<div class="hero-art" data-k="hero"><img src="img/hero.jpg" alt=""><div class="ht">
+  return `<div class="hero-art" data-k="hero"><a class="back-nav" href="https://boardgame.leisurecat.cloud" data-html2canvas-ignore>‹ 全部游戏</a><img src="img/hero.jpg" alt=""><div class="ht">
       <div class="wm">BRASS</div><div class="hr"></div><div class="hz">匹兹堡开局小助手</div><div class="hs">快速开局 · 计分不烧心</div></div></div>
     <div class="wrap" data-k="landing">
     <div class="card start">

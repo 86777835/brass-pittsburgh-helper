@@ -27,10 +27,15 @@ button{font-family:inherit;cursor:pointer}
 .orn{width:150px;height:10px;margin:8px auto 0;
   background:radial-gradient(circle,var(--brass2) 0 3px,transparent 3.5px) center/10px 10px no-repeat,
     linear-gradient(90deg,transparent,var(--brass) 30%,transparent 46%,transparent 54%,var(--brass) 70%,transparent) center/100% 1.5px no-repeat}
+/* shared back navigation */
+.back-nav{display:inline-flex;align-items:center;justify-content:center;flex:none;min-height:36px;padding:0 12px;border:1px solid var(--brass);border-radius:999px;background:var(--steel);color:var(--brass2);font:600 13px var(--sans);text-decoration:none;white-space:nowrap}
+.hero-art>.back-nav,.nav-hero>.back-nav{position:absolute;z-index:2;top:calc(env(safe-area-inset-top) + 8px);left:calc(env(safe-area-inset-left) + 12px)}
+.nav-hero{position:relative;padding-top:calc(env(safe-area-inset-top) + 56px)}
+.bar>.back-nav{margin-left:env(safe-area-inset-left)}
 /* slim bar (in game) */
 .bar{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;color:#f3ead6;
   background:repeating-linear-gradient(100deg,#212b3a 0 3px,#1c2532 3px 7px),var(--steel2);border-bottom:2px solid var(--brass)}
-.bar .ttl{flex:1;font:900 15px var(--serif);letter-spacing:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .ttl{flex:1;font:900 15px var(--serif);letter-spacing:2px;min-width:0}
 .room{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:15px;border:1px solid rgba(224,194,122,.5);
   background:rgba(0,0,0,.2);color:var(--brass2);font:600 15px var(--num);letter-spacing:2px}
 .room small{font:500 11px var(--sans);letter-spacing:0;color:#cbbf9f}
