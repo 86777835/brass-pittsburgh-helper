@@ -69,9 +69,7 @@ function connect() {
         ui.justSettled = Date.now(); clearTimeout(ui.lockTimer);
         ui.lockTimer = setTimeout(render, SETTLE_COOLDOWN_MS + 50);
       }
-      const drew = S && (m.state.draw || 0) > (S.draw || 0);
       S = m.state; syncDraft(); remember(code); render();
-      if (drew) playDraw();
     }
     else if (m.type === 'error' && m.error === 'noroom') { noRoom = true; forget(code); ws.close(); render(); }
   };
@@ -195,7 +193,8 @@ function setupView() {
         <button class="ib" data-act="move" data-i="${i}" data-j="${i - 1}" ${i === 0 ? 'disabled' : ''} aria-label="上移">↑</button>
         <button class="ib" data-act="move" data-i="${i}" data-j="${i + 1}" ${i === S.n - 1 ? 'disabled' : ''} aria-label="下移">↓</button>
       </div>`).join('')}</div>
-    <button class="btn ghost" data-act="shuffle">随机排序</button>
+    <button class="btn ghost" data-act="order">手指轮盘 / 抽签定顺位 ›</button>
+    <p class="note">定好后回到这里，用 ↑↓ 把顺位排好。</p>
     <button class="btn" data-act="start">开始游戏</button>`;
 }
 
@@ -221,7 +220,7 @@ function status() {
 
 function banner() {
   if (S.stage === 'over' && ui.tab !== 'mvp')
-    return `<div class="banner"><div style="flex:1"><b>游戏结束</b>，请完成第二时代计分</div><button data-act="goto" data-tab="${ui.tab === 'score' ? 'mvp' : 'score'}" data-era="2">${ui.tab === 'score' ? '看结算' : '去计分'}</button></div>`;
+    return `<div class="banner"><div style="flex:1"><b>游戏结束</b>，请完成${era1Filled() ? '第二时代' : '两个时代的'}计分</div><button data-act="goto" data-tab="${ui.tab === 'score' ? 'mvp' : 'score'}" data-era="${era1Filled() ? 2 : 1}">${ui.tab === 'score' ? '看结算' : '去计分'}</button></div>`;
   if (S.stage === 'play' && S.era === 2 && S.round === 1 && S.last && S.last.era === 1 && ui.tab === 'order')
     return `<div class="banner"><div style="flex:1"><b>第一时代已结束</b>，先做时代维护和计分</div><button data-act="goto" data-tab="score" data-era="1">去计分</button></div>`;
   return '';
@@ -253,8 +252,11 @@ function orderTab() {
     <div class="btns"><button class="btn ghost" data-act="undo" ${S.prev ? '' : 'disabled'}>撤销上次结算</button><button class="btn ghost" data-act="reset">重新开局</button></div>`;
 }
 
+// The score tab opens on era 1 until any of its scores are filled in (many tables score both eras at the end).
+const era1Filled = () => Object.values(S.score[1] || {}).some(d => Object.values(d || {}).some(v => Array.isArray(v) ? v.length : v !== undefined && v !== ''));
+
 function scoreTab() {
-  const era = ui.era || (S.era === 2 || S.stage === 'over' ? 2 : 1);
+  const era = ui.era || (era1Filled() && (S.era === 2 || S.stage === 'over') ? 2 : 1);
   const keys = era === 1 ? ['pre', 'rail', 'ind', 'alt'] : ['pre', 'rail', 'ind', 'alt', 'loco'];
   const cell = (id, key) => {
     const d = (S.score[era][id] || {})[key];
@@ -300,9 +302,9 @@ function mvpTab() {
           <div class="stack">${CATS.map(c => `<i style="width:${Math.max(0, r[c.k]) / maxSum * 100}%;background:${c.c}"></i>`).join('')}</div>
           <div class="parts">${CATS.map(c => `<em style="background:${c.c}"></em>${c.n} ${r[c.k]}`).join(' ')}</div></div>
         <div class="tot">${r.total}</div></div>`).join('')}</div>
-    <h2 class="h">成就</h2>
+    <h2 class="h">成就<small data-html2canvas-ignore>点开看数值</small></h2>
     <div class="achs">${R.ach.map(a => `
-      <div class="card ach" data-k="ach-${a.k}"><span class="medal">${a.ch}</span><div style="min-width:0"><div class="an">${a.name}</div><div class="ad">${a.desc}</div>
+      <div class="card ach" data-k="ach-${a.k}" data-act="ach" data-a="${a.k}" role="button"><span class="medal">${a.ch}</span><div style="min-width:0"><div class="an">${a.name}</div><div class="ad">${a.desc}</div>
         <div class="aw">${a.who.map(id => por(id, 'xs')).join('')}${a.who.length === 1 ? `<span class="fg" style="align-self:center;margin-left:3px">${esc(pname(a.who[0]))}</span>` : ''}</div></div></div>`).join('')}</div></div>
     ${reviewCard()}`;
 }
@@ -372,34 +374,42 @@ function showImage(url) {
   document.body.appendChild(el);
 }
 
-/* ---------- blind-bag draw (plays on every phone when someone shuffles) ---------- */
-const BAG_SVG = `<svg viewBox="0 0 120 130" width="120" height="130" aria-hidden="true">
-  <path d="M40 34C26 50 10 66 10 94c0 24 20 32 50 32s50-8 50-32c0-28-16-44-30-60z" fill="#7b5a36"/>
-  <path d="M40 34C26 50 10 66 10 94c0 24 20 32 50 32" fill="none" stroke="#5c4127" stroke-width="3" stroke-dasharray="5 4"/>
-  <path d="M42 30 32 8l14 9 6-13 8 12 8-12 6 13 14-9-10 22z" fill="#8c6a42"/><path d="M38 33h44l-3 8H41z" fill="#4e3620"/>
-  <circle cx="60" cy="88" r="17" fill="none" stroke="#e0c27a" stroke-width="3"/>
-  <text x="60" y="95" text-anchor="middle" font-family="Cinzel,serif" font-size="20" fill="#e0c27a">B</text></svg>`;
-const DRAW_START_MS = 1100, DRAW_STEP_MS = 650, DRAW_HOLD_MS = 1300;
-function playDraw() {
-  const seated = S.players.slice(0, S.n);
-  document.getElementById('draw')?.remove();
-  const el = document.createElement('div');
-  el.id = 'draw'; el.className = 'draw';
-  el.style.setProperty('--start', DRAW_START_MS + 'ms'); el.style.setProperty('--step', DRAW_STEP_MS + 'ms');
-  el.innerHTML = `<div class="dr-box"><div class="dr-t">盲抽顺位</div>
-    <div class="dr-slots">${seated.map((p, i) => `<div class="dr-s" style="--d:${(seated.length - 1) / 2 - i};--i:${i}">
-      <span class="por" style="--c:${COLORS[p.id]}"><img src="img/${p.fig}.jpg" alt=""></span><b>${i + 1}</b><i>${esc(p.name || FIGS[p.fig])}</i></div>`).join('')}</div>
-    <div class="dr-bag">${BAG_SVG}</div><div class="dr-skip">点击任意处跳过</div></div>`;
-  el.addEventListener('click', () => el.remove());
-  document.body.appendChild(el);
-  const end = DRAW_START_MS + seated.length * DRAW_STEP_MS + DRAW_HOLD_MS;
-  setTimeout(() => el.classList.add('out'), end);
-  setTimeout(() => el.remove(), end + 400);
+/* ---------- start order: the hub's finger chooser / bag draw, then 「返回」 comes back here ---------- */
+const orderUrl = n => `https://boardgame.leisurecat.cloud/?order=${n}&back=${encodeURIComponent(location.href)}`;
+
+/* ---------- achievement details: every player's numbers behind one achievement ---------- */
+const eraSpent = (r, e) => r.d.rounds.filter(h => h.era === e).reduce((a, h) => a + h.spent, 0);
+const ACH_COLS = {
+  mvp: [['总分', r => r.total], ['收入', r => r.inc], ['现金', r => r.cash]],
+  rail: [['第一时代', r => r.d.e1.rail], ['第二时代', r => r.d.e2.rail], ['合计', r => r.rail]],
+  ind: [['第一时代', r => r.d.e1.ind], ['第二时代', r => r.d.e2.ind], ['合计', r => r.ind]],
+  mid: [['第一时代', r => r.d.e1.pre], ['第二时代', r => r.d.e2.pre - r.d.e1.total], ['合计', r => r.mid]],
+  jewel: [['发电机', r => r.d.e1.alt + r.d.e2.alt], ['机车', r => r.d.e2.loco], ['合计', r => r.jewel]],
+  thrift: [['第一时代', r => eraSpent(r, 1)], ['第二时代', r => eraSpent(r, 2)], ['合计', r => r.spent]],
+  first: [['先手次数', r => r.firsts]],
+  rise: [['第一时代后', r => `第 ${r.e1place} 名`], ['最终', r => `第 ${r.place} 名`], ['提升', r => r.rise]]
+};
+ACH_COLS.big = ACH_COLS.thrift;
+const ACH_SORT = { mvp: r => -r.place, thrift: r => -r.spent, rise: r => r.rise };   // others: by the last column
+function achSheet(k) {
+  const R = results(S), a = !R.error && R.ach.find(x => x.k === k), cols = ACH_COLS[k];
+  if (!a || !cols) return '';
+  const by = ACH_SORT[k] || cols.at(-1)[1];
+  const rows = R.rows.slice().sort((x, y) => by(y) - by(x));
+  const perEra = (r, f) => [1, 2].map(e => { const t = f(r.d.rounds.filter(h => h.era === e)); return t ? `${eraName(e)}：${t}` : ''; }).filter(Boolean).join('<br>');
+  const extra = r => k === 'thrift' || k === 'big' ? perEra(r, hs => hs.map(h => h.spent).join(' · '))
+    : k === 'first' ? perEra(r, hs => { const f = hs.filter(h => h.first).map(h => h.round); return f.length ? `第 ${f.join('、')} 轮` : ''; }) : '';
+  return `<div class="mask" data-act="close"></div><div class="sheet"><h3>${a.name}</h3><div class="hint">${a.desc}${k === 'thrift' || k === 'big' ? '，下面列出每轮花了多少' : k === 'first' ? '，下面列出哪几轮先手' : ''}</div>
+    <div class="atw"><table class="at"><thead><tr><th></th>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead><tbody>
+    ${rows.map(r => `<tr class="${a.who.includes(r.id) ? 'win' : ''}${extra(r) ? ' has-sub' : ''}"><th>${por(r.id, 'xs')}<span>${esc(pname(r.id))}</span></th>${cols.map(c => `<td>${c[1](r)}</td>`).join('')}</tr>
+      ${extra(r) ? `<tr class="sub"><td colspan="${cols.length + 1}">${extra(r)}</td></tr>` : ''}`).join('')}</tbody></table></div>
+    <button class="btn ghost" data-act="close">关闭</button></div>`;
 }
 
 /* ---------- sheets ---------- */
 function sheetView() {
   const s = ui.sheet;
+  if (s.kind === 'ach') return achSheet(s.k);
   if (s.kind === 'fig') {
     const me = S.players[s.i];
     const taken = S.players.slice(0, S.n).filter(p => p !== me).map(p => p.fig);
@@ -498,7 +508,7 @@ document.addEventListener('click', e => {
     case 'pick': send({ t: 'player', i: ui.sheet.i, fig: d.fig }); ui.sheet = null; render(); break;
     case 'color': send({ t: 'player', i: +d.i, color: d.c }); break;
     case 'move': flushAll(); send({ t: 'move', i: +d.i, j: +d.j }); break;
-    case 'shuffle': flushAll(); send({ t: 'shuffle' }); break;
+    case 'order': flushAll(); setTimeout(() => { location.href = orderUrl(S.n); }, 150); break;   // let the name edits reach the room first
     case 'start': flushAll(); send({ t: 'start' }); break;
     case 'tab': ui.tab = d.tab; store.set('pgh-tab', d.tab); render(); window.scrollTo(0, 0); break;
     case 'goto': ui.tab = d.tab; if (d.era) ui.era = +d.era; render(); window.scrollTo(0, 0); break;
@@ -528,6 +538,7 @@ document.addEventListener('click', e => {
     }
     case 'k': keypad(d.k); break;
     case 'close': ui.sheet = null; render(); break;
+    case 'ach': ui.sheet = { kind: 'ach', k: d.a }; render(); break;
   }
 });
 

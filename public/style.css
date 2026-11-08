@@ -177,6 +177,18 @@ table.sc{width:100%;margin-top:8px;border-collapse:separate;border-spacing:0 6px
 .parts em:first-child{margin-left:0}
 .achs{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:6px}
 .ach{display:flex;align-items:center;gap:8px;padding:7px 8px}
+.ach[role=button]{cursor:pointer}
+.h small{margin-left:8px;font:500 11px var(--sans);color:var(--ink2);letter-spacing:0}
+.atw{max-height:60vh;overflow:auto;margin-top:8px}
+.at{width:100%;border-collapse:collapse;font-size:13px}
+.at th,.at td{padding:6px 4px;text-align:center;border-bottom:1px solid rgba(90,74,56,.18)}
+.at thead th{font:600 11.5px var(--sans);color:var(--ink2)}
+.at tbody th{text-align:left;font:600 13px var(--sans);white-space:nowrap}
+.at tbody th .por{vertical-align:middle;margin-right:5px}
+.at td{font:600 15px var(--num)}
+.at tr.win th,.at tr.win td{color:var(--red)}
+.at tr.has-sub th,.at tr.has-sub td{border-bottom:0}
+.at tr.sub td{padding-top:0;text-align:left;font:500 11.5px/1.5 var(--sans);color:var(--ink2)}
 .ach .medal{width:34px;height:34px;font-size:16px}
 .ach .an{font:900 13.5px var(--serif);color:var(--red)}
 .ach .ad{font-size:10.5px;color:var(--ink2);line-height:1.35}
@@ -290,22 +302,6 @@ a.btn.ghost{line-height:35px}
 .fq p{padding:0 12px 11px;font:500 14px/1.7 var(--sans);color:var(--ink2)}
 .fq p a{font-size:12px;color:var(--navy2);white-space:nowrap}
 
-/* blind-bag draw overlay */
-.draw{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(15,19,28,.93);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);animation:drIn .25s ease;transition:opacity .4s}
-.draw.out{opacity:0}
-.dr-box{text-align:center;color:#f3ead6}
-.dr-t{font:900 22px var(--serif);letter-spacing:8px;text-indent:8px;color:var(--brass2)}
-.dr-slots{display:flex;gap:10px;justify-content:center;margin-top:24px;min-height:100px}
-.dr-s{width:64px;opacity:0;animation:drPop .75s cubic-bezier(.2,.9,.3,1.2) forwards;animation-delay:calc(var(--start) + var(--i) * var(--step))}
-.dr-s .por{display:block;width:58px;height:58px;padding:3px;margin:0 auto;box-shadow:0 0 0 2px var(--brass2),0 4px 12px rgba(0,0,0,.5)}
-.dr-s b{display:block;margin-top:6px;font:600 18px var(--num);color:var(--brass2)}
-.dr-s i{display:block;font-style:normal;font-size:11px;color:#cfc5ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dr-bag{width:120px;height:130px;margin:18px auto 0;transform-origin:50% 92%;animation:drShake .9s ease-in-out,drJig var(--step) ease-in-out var(--start) infinite}
-.dr-skip{margin-top:16px;font-size:12px;color:#8f8a7d}
-@keyframes drIn{from{opacity:0}}
-@keyframes drPop{0%{opacity:0;transform:translate(calc(var(--d) * 74px),170px) scale(.3)}45%{opacity:1;transform:translate(calc(var(--d) * 37px),-28px) scale(1.15)}100%{opacity:1;transform:none}}
-@keyframes drShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-9deg)}40%{transform:rotate(8deg)}60%{transform:rotate(-5deg)}80%{transform:rotate(3deg)}}
-@keyframes drJig{0%,100%{transform:scale(1)}25%{transform:scale(1.07,.93)}}
 .lobby .lc em{display:block;margin-top:1px;font:700 10px var(--sans);font-style:normal;letter-spacing:2px;color:var(--brass)}
 
 /* rules assistant (chat.js) */

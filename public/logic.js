@@ -76,14 +76,6 @@ export function reduce(s, a) {
       return done();
     }
 
-    case 'shuffle': {
-      if (S.stage !== 'setup') return null;
-      const a2 = S.players;
-      for (let i = S.n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a2[i], a2[j]] = [a2[j], a2[i]]; }
-      S.draw = (s.draw || 0) + 1;   // tells every phone to play the blind-bag draw
-      return done();
-    }
-
     case 'start':
       if (S.stage !== 'setup') return null;
       Object.assign(S, { stage: 'play', gid: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),   // names this game in the archive
@@ -172,7 +164,8 @@ export function results(S) {
       id, total: e2.total, inc, cash, e1: e1.total,
       mid: e1.pre + (e2.pre - e1.total),           // points scored during play (track moves outside era-end scoring)
       rail: e1.rail + e2.rail, ind: e1.ind + e2.ind, jewel: e1.alt + e2.alt + e2.loco,
-      spent: spentAll, firsts, pre2Missing: !e2.preFilled
+      spent: spentAll, firsts, pre2Missing: !e2.preFilled,
+      d: { e1, e2, rounds: S.history.map(h => ({ era: h.era, round: h.round, spent: h.spent[id] || 0, first: h.order[0] === id })) }   // for the achievement details
     });
   }
   const sorted = rows.slice().sort((a, b) => b.total - a.total || b.inc - a.inc || b.cash - a.cash);
