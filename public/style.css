@@ -366,3 +366,5 @@ body.has-chat{padding-bottom:72px}
 .rv-done{text-align:center;font-size:30px;letter-spacing:4px;color:#e0a92e}
 .rv p{text-align:center;margin:4px 0 10px;font:600 15px var(--serif)}
 .rv .note{text-align:left;margin:8px 0 0;font:12px/1.6 var(--sans)}
+/* 写评价: opens this game's review form on the hub, then 返回 comes back here */
+.hero-art>.rate-nav{left:auto;right:calc(env(safe-area-inset-right) + 12px)}
