@@ -10,8 +10,8 @@ try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   await page.route('https://boardgame.leisurecat.cloud/api/reviews**', r => r.fulfill({ json: { ok: true } }));
   const check = async label => {
-    await page.locator('.back-nav').waitFor({ state: 'visible' });
-    const issues = await page.locator('.back-nav').evaluate(nav => {
+    await page.locator('.back-nav:not(.rate-nav)').waitFor({ state: 'visible' });
+    const issues = await page.locator('.back-nav:not(.rate-nav)').evaluate(nav => {
       const a = nav.getBoundingClientRect(), errors = [];
       if (a.height < 36 || a.left < 0 || a.right > innerWidth || a.top < 0 || a.bottom > innerHeight) errors.push('bounds');
       if (document.documentElement.scrollWidth > innerWidth) errors.push('overflow');
@@ -27,8 +27,8 @@ try {
     console.log('PASS', label);
   };
   await page.goto(base);
-  assert.equal(await page.locator('.back-nav').textContent(), '‹ 全部游戏');
-  assert.equal(await page.locator('.back-nav').getAttribute('href'), 'https://boardgame.leisurecat.cloud');
+  assert.equal(await page.locator('.back-nav:not(.rate-nav)').textContent(), '‹ 全部游戏');
+  assert.equal(await page.locator('.back-nav:not(.rate-nav)').getAttribute('href'), 'https://boardgame.leisurecat.cloud');
   await check('landing navigation / mobile geometry');
   await page.screenshot({ path: `${out}/nav_pgh_landing.png` });
   await page.click('[data-act="create"]');
@@ -36,9 +36,9 @@ try {
   const code = new URL(page.url()).searchParams.get('r');
   await page.fill('[data-name="0"]', '返回测试');
   await page.waitForTimeout(600);
-  assert.equal(await page.locator('.back-nav').textContent(), '‹ 首页');
+  assert.equal(await page.locator('.back-nav:not(.rate-nav)').textContent(), '‹ 首页');
   await check('setup navigation / mobile geometry');
-  await page.click('.back-nav');
+  await page.click('.back-nav:not(.rate-nav)');
   await page.waitForSelector('[data-act="create"]');
   assert.equal(new URL(page.url()).search, '');
   await page.click(`[data-act="rejoin"][data-code="${code}"]`);
@@ -52,7 +52,7 @@ try {
     await page.click(`[data-tab="${tab}"]`);
     await check(`${tab} navigation / mobile geometry`);
     if (tab === 'order') await page.screenshot({ path: `${out}/nav_pgh_room.png` });
-    await page.click('.back-nav');
+    await page.click('.back-nav:not(.rate-nav)');
     await page.fill('#joinCode', code);
     await page.click('[data-act="join"]');
     await page.waitForSelector('.status');
@@ -61,11 +61,11 @@ try {
   console.log('PASS game survives leave and room-code rejoin from every tab');
   for (const name of ['guide', 'history']) {
     await page.goto(new URL(`/${name}.html`, base).href);
-    assert.equal(await page.locator('.back-nav').textContent(), '‹ 返回');
-    assert.equal(await page.locator('.back-nav').getAttribute('href'), '/');
+    assert.equal(await page.locator('.back-nav:not(.rate-nav)').textContent(), '‹ 返回');
+    assert.equal(await page.locator('.back-nav:not(.rate-nav)').getAttribute('href'), '/');
     await check(`${name} navigation / mobile geometry`);
     await page.screenshot({ path: `${out}/nav_pgh_${name}.png` });
-    await page.click('.back-nav');
+    await page.click('.back-nav:not(.rate-nav)');
     await page.waitForSelector('[data-act="create"]');
   }
   console.log('ALL PASS');

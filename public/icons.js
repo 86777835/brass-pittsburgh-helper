@@ -1,0 +1,50 @@
+// Simplified icons for the 3-minute teach page, drawn for this site (not copied from the game's art).
+// Each one only echoes the real icon's shape and colour so players can match it to what is on the table.
+// All are 40 × 40; ICON(id) returns an <svg> string.
+const C = { navy: '#26406a', blue: '#2f7fb8', gold: '#d6a63c', gold2: '#f2d27a', dark: '#1f1a14', purple: '#6c4fa0', purple2: '#9a83c9', red: '#a3262a', orange: '#d9772b', grey: '#8d939b', wood: '#b07a3e', green: '#3f8f4f', silver: '#c8ccd2' };
+
+const cube = (top, side, front) => `<path d="M20 7l12 6v14l-12 6-12-6V13z" fill="${front}"/><path d="M20 7l12 6-12 6-12-6z" fill="${top}"/><path d="M20 19l12-6v14l-12 6z" fill="${side}"/>`;
+const pill = (fill, inner) => `<rect x="3" y="11" width="34" height="18" rx="9" fill="${fill}" stroke="#3d2f63" stroke-width="1.5"/>${inner}`;
+const loco = (x = 0, s = 1) => `<g transform="translate(${x} 0) scale(${s})" fill="#1c1c22"><rect x="9" y="15" width="13" height="7" rx="1"/><rect x="22" y="12" width="8" height="10" rx="1"/><rect x="11" y="11" width="3" height="4"/><circle cx="12" cy="24" r="2.4"/><circle cx="19" cy="24" r="2.4"/><circle cx="26" cy="24" r="2.4"/><path d="M6 23l3-4v5z"/></g>`;
+
+const SVG = {
+  vp: `<path d="M20 3l14.5 8.5v17L20 37 5.5 28.5v-17z" fill="${C.dark}" stroke="${C.gold}" stroke-width="2"/><text x="20" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#fff" font-family="Georgia,serif">4</text>`,
+  link: `<circle cx="20" cy="20" r="15" fill="${C.navy}" stroke="#9fb6d8" stroke-width="2"/><path d="M10 20l5-5v3h10v-3l5 5-5 5v-3H15v3z" fill="#fff"/>`,
+  era1: `<circle cx="20" cy="20" r="14" fill="#fff" stroke="${C.dark}" stroke-width="2.5"/><path d="M20 6a14 14 0 0 0 0 28z" fill="${C.blue}"/>`,
+  era2: `<circle cx="20" cy="20" r="14" fill="#fff" stroke="${C.dark}" stroke-width="2.5"/><path d="M20 6a14 14 0 0 0 0 28z" fill="${C.dark}"/>`,
+  income: `<ellipse cx="20" cy="32" rx="11" ry="3.5" fill="#a77b2a"/><ellipse cx="20" cy="29" rx="11" ry="3.5" fill="${C.gold}"/><path d="M20 4l12 11h-5v12H13V15H8z" fill="${C.gold2}" stroke="#8a6420" stroke-width="1.5"/><text x="20" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="${C.dark}" font-family="Georgia,serif">3</text>`,
+  money: `<circle cx="20" cy="20" r="15" fill="${C.gold}" stroke="#8a6420" stroke-width="2"/><circle cx="20" cy="20" r="11" fill="none" stroke="#8a6420" stroke-width="1"/><text x="20" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#5a3f10" font-family="Georgia,serif">$</text>`,
+  cubes: `<g transform="translate(-6 4) scale(.7)">${cube('#444', '#111', '#2a2a2a')}</g><g transform="translate(12 4) scale(.7)">${cube('#f0a060', '#a8561c', C.orange)}</g><g transform="translate(-6 17) scale(.7)">${cube('#b9bec5', '#5f646b', C.grey)}</g><g transform="translate(12 17) scale(.7)">${cube('#d4555a', '#6e1518', C.red)}</g>`,
+  coal: cube('#4a4a4a', '#0e0e0e', '#2a2a2a'),
+  iron: cube('#f0a060', '#a8561c', C.orange),
+  steel: cube('#c3c8ce', '#5f646b', C.grey),
+  coke: cube('#d4555a', '#6e1518', C.red),
+  oil: `<rect x="11" y="9" width="18" height="24" rx="3" fill="${C.silver}" stroke="#6d737b" stroke-width="1.5"/><ellipse cx="20" cy="9" rx="9" ry="3" fill="#e6e9ec" stroke="#6d737b" stroke-width="1.5"/><path d="M11 17h18M11 25h18" stroke="#6d737b" stroke-width="1.5"/>`,
+  whiskey: `<rect x="17" y="3" width="6" height="8" rx="1" fill="#5b3a1a"/><path d="M14 13q0-2 3-2h6q3 0 3 2v22q0 2-2 2H16q-2 0-2-2z" fill="#c98a2b" stroke="#6b4310" stroke-width="1.5"/><rect x="14.5" y="19" width="11" height="9" rx="1" fill="#2f5d9a"/><path d="M17 23.5h6" stroke="#fff" stroke-width="1.5"/>`,
+  star: `<path d="M20 4l4 12 12 4-12 4-4 12-4-12-12-4 12-4z" fill="${C.gold2}" stroke="#a77b2a" stroke-width="1.5"/>`,
+  qreward: `<rect x="4" y="9" width="32" height="22" rx="4" fill="${C.dark}" stroke="${C.gold}" stroke-width="1.5"/><path d="M12 14l1.5 4.5 4.5 1.5-4.5 1.5L12 26l-1.5-4.5L6 20l4.5-1.5zM20 14l1.5 4.5 4.5 1.5-4.5 1.5L20 26l-1.5-4.5L14 20l4.5-1.5zM28 14l1.5 4.5 4.5 1.5-4.5 1.5L28 26l-1.5-4.5L22 20l4.5-1.5z" fill="${C.gold2}"/>`,
+  upgrade: `<rect x="8" y="15" width="18" height="18" rx="2" fill="#4a4060" stroke="${C.dark}" stroke-width="1.5"/><rect x="14" y="9" width="18" height="18" rx="2" fill="${C.purple2}" stroke="${C.dark}" stroke-width="1.5"/><path d="M23 12l6 7h-4v5h-4v-5h-4z" fill="#fff"/>`,
+  level: `<rect x="6" y="6" width="28" height="28" rx="3" fill="${C.purple}" stroke="${C.dark}" stroke-width="1.5"/><text x="20" y="25" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" font-family="Georgia,serif">IV</text>`,
+  tile: `<rect x="6" y="6" width="28" height="28" rx="3" fill="${C.purple2}" stroke="${C.dark}" stroke-width="1.5"/><text x="10" y="15" font-size="7" font-weight="700" fill="${C.dark}" font-family="Georgia,serif">I</text><rect x="13" y="16" width="14" height="11" fill="${C.wood}" stroke="#6b4a22"/><path d="M13 21.5h14M20 16v11" stroke="#6b4a22"/>`,
+  flip: `<rect x="4" y="9" width="15" height="22" rx="2" fill="${C.purple2}" stroke="${C.dark}" stroke-width="1.5"/><rect x="21" y="9" width="15" height="22" rx="2" fill="#2d2540" stroke="${C.dark}" stroke-width="1.5"/><path d="M8 7q12-6 24 0" fill="none" stroke="${C.gold}" stroke-width="2"/><path d="M32 7l-4-1 2 4z" fill="${C.gold}"/><path d="M28.5 21l1 3h3l-2.4 1.8.9 3-2.5-1.8-2.5 1.8.9-3L24.5 24h3z" fill="${C.gold2}"/>`,
+  reward: `<rect x="5" y="5" width="30" height="30" rx="3" fill="#2d2540" stroke="${C.dark}" stroke-width="1.5"/><circle cx="26" cy="26" r="7" fill="${C.green}" stroke="#fff" stroke-width="1.5"/><text x="26" y="30" text-anchor="middle" font-size="10" font-weight="700" fill="#fff" font-family="Georgia,serif">$</text>`,
+  light: pill(C.purple2, loco()),
+  heavy: pill(C.purple, loco(-1, 1.04) + '<rect x="29" y="8" width="7" height="7" rx="1" fill="#c3c8ce" stroke="#3d2f63"/>'),
+  pipe: pill(C.purple2, `<rect x="6" y="17" width="28" height="6" fill="#3a3a44"/><rect x="11" y="14" width="3" height="12" fill="#1c1c22"/><rect x="26" y="14" width="3" height="12" fill="#1c1c22"/><circle cx="20" cy="20" r="4.5" fill="${C.silver}" stroke="#1c1c22"/>`),
+  order: `<rect x="3" y="12" width="34" height="16" rx="3" fill="#30384a"/><circle cx="10" cy="20" r="5" fill="${C.gold2}"/><circle cx="20" cy="20" r="5" fill="#9fb6d8"/><circle cx="30" cy="20" r="5" fill="#d9a0a0"/><path d="M8 8h24l-3-3m3 3l-3 3" stroke="${C.gold}" stroke-width="1.8" fill="none"/>`,
+  merchant: `<path d="M8 6h24v14q0 10-12 15Q8 30 8 20z" fill="#3a3020" stroke="${C.gold}" stroke-width="2"/><rect x="14" y="13" width="12" height="10" fill="${C.wood}" stroke="#6b4a22"/><path d="M14 18h12M20 13v10" stroke="#6b4a22"/>`,
+  market: `<rect x="12" y="3" width="16" height="34" rx="2" fill="#3b3326"/><rect x="15" y="6" width="10" height="7" fill="#2a2a2a" stroke="${C.gold}"/><rect x="15" y="16" width="10" height="7" fill="#2a2a2a" stroke="${C.gold}"/><rect x="15" y="26" width="10" height="7" fill="none" stroke="${C.gold}"/><text x="7" y="13" font-size="6" fill="${C.gold2}" font-family="Georgia,serif">1</text><text x="7" y="23" font-size="6" fill="${C.gold2}" font-family="Georgia,serif">2</text><text x="7" y="33" font-size="6" fill="${C.gold2}" font-family="Georgia,serif">3</text>`,
+  oilfield: `<path d="M20 3l14.5 8.5v17L20 37 5.5 28.5v-17z" fill="#4a3a2a" stroke="${C.gold}" stroke-width="2"/><path d="M20 9l-6 20h12zM16 22h8M17.5 17h5" stroke="#e8dcc0" stroke-width="1.6" fill="none"/>`,
+  vanderbilt: `<ellipse cx="20" cy="29" rx="15" ry="4" fill="${C.dark}"/><rect x="11" y="8" width="18" height="21" rx="2" fill="${C.dark}"/><rect x="11" y="23" width="18" height="3" fill="${C.red}"/><text x="20" y="20" text-anchor="middle" font-size="10" font-weight="700" fill="${C.gold2}" font-family="Georgia,serif">$</text>`,
+  kerosene: `<rect x="11" y="10" width="18" height="24" rx="2" fill="${C.red}" stroke="#5a1214" stroke-width="1.5"/><rect x="16" y="5" width="8" height="5" fill="#7a7a7a"/><rect x="14" y="17" width="12" height="9" fill="#efe4cb"/><path d="M17 21.5h6" stroke="${C.red}" stroke-width="1.5"/>`,
+  manuf: `<rect x="7" y="9" width="26" height="22" fill="${C.wood}" stroke="#6b4a22" stroke-width="1.5"/><path d="M7 20h26M20 9v22M7 9l26 22" stroke="#6b4a22" stroke-width="1.5"/>`,
+  auto: `<path d="M5 26v-6l4-1 4-7h12l5 7 5 1v6z" fill="#2c3646" stroke="#11161e" stroke-width="1.5"/><path d="M15 13h4v6h-7zM21 13h4l4 6h-8z" fill="#9fb6d8"/><circle cx="12" cy="27" r="3.5" fill="#11161e"/><circle cx="28" cy="27" r="3.5" fill="#11161e"/>`,
+  coalmine: `<path d="M8 17h24l-3 13H11z" fill="#5d5d66" stroke="#26262c" stroke-width="1.5"/><path d="M10 17q2-6 6-5 2-4 6-2 5-2 8 7z" fill="#1c1c1c"/><circle cx="13" cy="32" r="2.5" fill="#26262c"/><circle cx="27" cy="32" r="2.5" fill="#26262c"/>`,
+  cokeoven: `<path d="M5 32q0-22 15-22t15 22z" fill="#c9b48a" stroke="#6b5a3a" stroke-width="1.5"/><path d="M15 32q0-8 5-8t5 8z" fill="#3a2410"/><path d="M8 24h24M11 17h18" stroke="#6b5a3a"/>`,
+  ironsteel: `<path d="M12 12h16l-2 20H14z" fill="#3a3a44" stroke="#1c1c22" stroke-width="1.5"/><path d="M14 12q6-6 12 0" fill="${C.orange}"/><path d="M17 8q1-3 3-1 2-3 3 1" stroke="${C.orange}" stroke-width="1.5" fill="none"/><rect x="16" y="20" width="8" height="5" fill="${C.orange}"/>`,
+  location: `<rect x="3" y="13" width="34" height="13" rx="2" fill="${C.red}" stroke="${C.gold}" stroke-width="1.5"/><path d="M9 19.5h22" stroke="#efe4cb" stroke-width="2.5" stroke-dasharray="3 2"/><circle cx="14" cy="32" r="3" fill="${C.navy}"/><circle cx="26" cy="32" r="3" fill="${C.navy}"/>`,
+  oilreq: `<rect x="4" y="12" width="32" height="16" rx="8" fill="${C.purple2}" stroke="#3d2f63" stroke-width="1.5"/><rect x="15" y="14.5" width="10" height="11" rx="2" fill="${C.silver}" stroke="#6d737b"/><text x="31" y="24" text-anchor="middle" font-size="8" font-weight="700" fill="${C.dark}">2</text>`
+};
+
+export const ICON = (id, cls = '') => SVG[id] ? `<svg class="ico ${cls}" viewBox="0 0 40 40" aria-hidden="true">${SVG[id]}</svg>` : '';
+export const ICON_IDS = Object.keys(SVG);

@@ -69,6 +69,16 @@
 <img src="docs/screenshots/faq.jpg" width="260" alt="常见问题">
 </p>
 
+### 3 分钟讲规则（`/teach`）
+
+首页「第一次玩？3 分钟讲规则」进入。给带新人的讲规则的人用：照着念就能开局，约 780 字、3 分钟，分五段：怎么赢、一轮怎么走、六种行动、资源从哪来、时代结束；最后一段「先别管，遇到再问」列出第一局用不上的细节。
+
+- 讲稿里带下划线的词（38 个）点一下，从底部弹出注释：图标、在桌上哪儿看到、什么意思，以及「还不懂？问规则助手」。
+- 每段下面的「问」按钮和「遇到再问」里的每一条，点一下就打开规则助手并直接提问，问题都是常见问题里有答案的。
+- 页面底部「图标速查」按分数、时代、资源、板块、火车管道、版图、产业种类列出 35 个图标。
+- 图标是本站自己画的简化 SVG（`public/icons.js`），只借实物图标的形状和颜色，方便对照，不是官方图。
+- 内容依据官方规则书 v2026.01（Roxley 官网 PDF），用词和 `tools/讲解稿.md` 一致。
+
 ### 规则助手
 
 每个页面右下角都有「规则」按钮，点开就能用中文问规则，比如花费相同怎么排顺位、石油城怎么用。助手用 DeepSeek V4.1 Flash（`deepseek-flash`）逐字回答，只依据本站的讲解稿和常见问题作答，资料里没有的不会乱编。Flash 过载、排队或出错时，依次改由备用模型回答（页面上不显示是哪个模型，服务端日志里有记录）：先是 Cloudflare Workers AI 上的 Qwen3.8 27B（`@cf/qwen/qwen3.8-27b`，不依赖 DeepSeek 的服务器），再是 DeepSeek V4 Pro（`deepseek-v4-pro`）。每个模型 9 秒内须开始回答，回答中途停顿超过 8 秒也会换下一个模型从头回答；都不行就提示稍后再问。另有每小时一次的定时检查（Cron Trigger）：DeepSeek 不通时，接下来一小时直接先用 Qwen，结果存在 KV 里。
@@ -88,6 +98,7 @@
 | 部分 | 说明 |
 |---|---|
 | `public/` | 页面静态资源：`index.html`、`app.js`、`style.css`、`img/`、教程页 `guide.html`、往期对局 `history.html` |
+| `public/teach.html`、`teach.js`、`icons.js` | 3 分钟讲规则页：讲稿、术语注释、问答按钮、图标速查（数据都在 `teach.js` 开头），本站自画的简化图标 |
 | `public/logic.js` | 规则与状态逻辑（顺位、计分、成就），页面和服务端共用同一份代码，服务端权威校验 |
 | `src/worker.js` | Cloudflare Worker：建房接口；`Room`（每个房间一个 Durable Object，WebSocket 实时同步）；`Lobby`（首页房间列表）；`Archive`（往期对局存档）；R2 视频流（支持拖动进度）；`/api/chat` 规则助手（DeepSeek 流式转发，按 IP 限流，密钥只存在服务端） |
 | `public/vendor/` | [html2canvas](https://github.com/niklasvh/html2canvas) 1.4.1（MIT），用于生成结算长图 |
@@ -126,6 +137,7 @@ node tests/test_room2.mjs   http://localhost:8799/ ./shots                # 4 �
 node tests/test_history.mjs http://localhost:8799/ ./shots --many-rooms   # 往期对局存档与搜索；房间多时首页按钮仍在首屏
 node tests/test_history.mjs https://你的域名/ ./shots --live              # 线上冒烟：打完一局再撤销，不留记录
 node tests/test_chat.mjs    http://localhost:8799/ ./shots --no-key       # 规则助手界面（未配置密钥时）
+node tests/test_teach.mjs   http://localhost:8799/ ./shots                # 3 分钟讲规则：入口、每个术语的注释、「问」按钮直接提问、图标速查、375px 不横向滚动（模拟回答，也可对线上跑）
 node tests/test_chat.mjs    http://localhost:8799/ ./shots --mock-upstream # 备用模型切换（wrangler dev 需加 --var DEEPSEEK_API_KEY:fake --var DEEPSEEK_BASE:http://127.0.0.1:8790 --var CHAT_CF_MODEL:@cf/none/missing）
 node tests/test_chat.mjs    http://localhost:8799/ ./shots --mock-web      # 联网查找（同上的 wrangler dev 参数；和上一条隔 1 分钟跑，避开每分钟 8 问的限流）
 node tests/test_chat.mjs    https://你的域名/ ./shots --live              # 规则助手线上实问一次
