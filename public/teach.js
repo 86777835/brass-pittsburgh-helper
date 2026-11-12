@@ -1,9 +1,11 @@
 // 3-minute teach: a script the teacher reads aloud to start a first game, written from the official rulebook v2026.01
-// (same wording as tools/讲解稿.md). Terms in {text|id} open a note with an icon (icons.js); the 「问」 buttons and
-// each note's 「问规则助手」 ask the rules assistant (chat.js) straight away. Details left out on purpose are listed last.
-import { ICON } from './icons.js';
+// (same wording as tools/讲解稿.md). It names every important element in a sentence and leaves the fine rulings to the
+// rules assistant. Terms in {text|id} open a note with a picture cropped from the rulebook (img/teach/<icon>.webp); the
+// 「问」 buttons and each note's 「问规则助手」 ask the rules assistant (chat.js) straight away.
+// The pictures are cut from Roxley's official rulebook (user's call, 2026-11-12); the page footer credits it.
+const ICON = (id, cls = '') => id ? `<img class="ico ${cls}" src="img/teach/${id}.webp" alt="">` : '';
 
-// id: name, where you see it on the table, what it means. icon: an id in icons.js, or none.
+// id: name, where you see it on the table, what it means. icon: a picture in img/teach/.
 const TERMS = {
   vp: { name: '胜利点', icon: 'vp', where: '黑色六边形里写着数字：版图外圈的分数轨、产业板块左下角、市场格子上。', what: '就是分数。两个时代打完，胜利点最多的人赢。' },
   link: { name: '连线点', icon: 'link', where: '深蓝圆形里一个双向箭头：地点名牌上、产业板块右上角。', what: '时代结束时，你的每条火车两头的地点上每有一个连线点，这条火车就得 1 分。' },
@@ -37,6 +39,11 @@ const TERMS = {
   merchant: { name: '商人', icon: 'merchant', where: '版图边上的盾形板块，画着它收哪些产业。', what: '出售时，产业要连通到画有这种产业图标的商人。卖给正面朝上的商人还能拿它的奖励，拿完翻面。' },
   oilfield: { name: '油田', icon: 'oilfield', where: '版图上的六边形板块，开局背面朝上。', what: '第一条管道连上它时翻开，连管道的人拿左边的奖励；右边画的油会加入油田（第一时代翻开的，要等第一时代结束才加）。油田不算地点。' },
   vanderbilt: { name: '范德比尔特', icon: 'vanderbilt', where: '版图上的人物肖像，旁边标着价格。', what: '实在拿不到资源时找他，不用连通，但贵：煤和铁 7 元一个，钢和焦炭 10 元一个。' },
+  crown: { name: '皇冠明珠产业', icon: 'skyscraper', where: '玩家板产业轨道的顶端或支线上，一共四种。', what: '后期很强的特殊产业：石油城、机车厂、多相交流发电机、摩天楼。各自效果不同，点下面的「问」或分别点开看。' },
+  oilcity: { name: '石油城', icon: 'oilcity', where: '煤油轨道顶端。', what: '只在第二时代、用“石油城”牌建，直接建在已有管道连着的油田上：油田的油全部挪上来再加 3 桶，谁都能经连通的管道用。最后一桶用掉时翻面，奖励 25 元。' },
+  loco: { name: '机车厂', icon: 'loco', where: '制造业轨道顶端。', what: '只在第二时代建，建好就是翻面的：升级你一个制造业产业，送 3 次免费发展；时代结束时，你建过的每辆重型火车得 4 分。' },
+  polyphase: { name: '多相交流发电机', icon: 'polyphase', where: '煤炭轨道顶端。', what: '建好就是翻面的：升级你一个煤矿，立刻拿当前收入等级 2 倍的钱；时代结束时，你玩家板上每个空出来的产业格得 1 分。' },
+  skyscraper: { name: '摩天楼', icon: 'skyscraper', where: '钢铁轨道分出的支线上。', what: '建好就是翻面的：立刻送你一次额外的出售，不用弃牌，要马上做。' },
   kerosene: { name: '煤油精炼厂', icon: 'kerosene', where: '玩家板上的煤油轨道。', what: '可以出售的产业之一，卖给连通的商人，通常要用石油。' },
   manuf: { name: '制成品', icon: 'manuf', where: '玩家板上的制造业轨道。', what: '可以出售的产业之一，卖给连通的商人。' },
   auto: { name: '汽车厂', icon: 'auto', where: '玩家板上的制造业轨道，靠上的位置。', what: '可以出售的产业之一，卖给连通的商人。' },
@@ -45,53 +52,59 @@ const TERMS = {
   ironsteel: { name: '钢铁厂', icon: 'ironsteel', where: '玩家板上的钢铁轨道。', what: '建好时放上铁或钢（看板块右下角画的方块），用法和煤矿一样。' }
 };
 
-// The script: what to read aloud. 「问」 buttons ask the rules assistant those questions.
+// The script: what to read aloud. Every important element gets one sentence; how it is ruled exactly is for the assistant.
 const PARTS = [
-  { title: '怎么赢', sec: 20, lines: [
-    '这局我们玩《工业革命：匹兹堡》。我先花三分钟讲怎么玩，细节遇到了再查。',
-    '我们都是 1865 年的匹兹堡工业大亨：开工厂、修铁路、铺油管。',
-    '游戏分两个{时代|era}，每个时代 8 轮。两个时代打完，{胜利点|vp}最多的人赢。',
-    '分数主要有两个来源：{翻过面|flip}的{产业板块|tile}，左下角写着它值几分；还有你修的火车，两头地点上的{连线点|link}越多越值钱。'
+  { title: '怎么赢', sec: 25, lines: [
+    '这局玩《工业革命：匹兹堡》。我先把要素都过一遍，具体怎么判定，遇到了再问规则助手。',
+    '我们是 1865 年的匹兹堡工业大亨：开工厂、修铁路、铺油管。',
+    '游戏分两个{时代|era}，每个时代 8 轮，打完{胜利点|vp}最多的人赢。',
+    '分数主要来自两处：{翻过面|flip}的{产业板块|tile}左下角的分；还有你的火车，两头地点上的{连线点|link}越多越值钱。'
   ], ask: ['胜利点主要从哪里来？', '产业板块什么时候会翻面？'] },
   { title: '一轮怎么走', sec: 30, lines: [
-    '按{顺位轨|order}从左到右轮流，每人做 2 个行动，可以做两次同一种。只有第一时代第一轮，每人只做 1 个。',
-    '每个行动都要弃一张牌。做完两个行动，摸回 8 张。',
-    '这一轮花的{钱|money}都放在自己的角色板块上。轮末按花钱从少到多重排顺位：花得越少，下一轮越先。',
-    '然后每人按自己的{收入等级|income}拿钱；收入是负的就付钱。'
+    '按{顺位轨|order}从左到右轮流，每人做 2 个行动，可以重复；只有第一时代第一轮，每人只做 1 个。',
+    '每个行动都要弃一张牌，做完摸回 8 张。',
+    '这一轮花的{钱|money}放在自己的角色板块上，轮末花得少的下一轮先走。',
+    '然后每人按{收入等级|income}拿钱；收入是负的就付钱。'
   ], ask: ['花的钱一样多，顺位怎么排？', '手牌用完后怎么办？', '付不起负收入会怎样？'] },
-  { title: '六种行动', sec: 60, lines: [
-    '**建造**：把玩家板上的{产业板块|tile}放到地图上，付板块左边的钱和{资源|cubes}。要弃一张对应的地点牌或产业牌。',
-    '**网络**：放一条{轻型火车|light}、{重型火车|heavy}或{管道|pipe}。它决定你能在哪儿建造，资源和{石油|oil}也靠它运。',
-    '**出售**：把{煤油精炼厂|kerosene}、{制成品|manuf}、{汽车厂|auto}卖给{连通|connected}的{商人|merchant}，大多要用石油。卖掉的板块{翻面|flip}，拿右下角的{奖励|reward}。',
-    '**发展**：花{铁|iron}或{钢|steel}，把玩家板上一两块低级的板块直接扔掉，好早点建高级的。',
-    '**贷款**：拿 30 元，但{收入等级|income}降 3 级。',
-    '**过**：拿一瓶{威士忌|whiskey}。注意，过也要弃牌。'
-  ], ask: ['建造时地点牌、产业牌、威士忌分别怎么用？', '出售需要什么条件？', '网络行动的费用是多少？'] },
-  { title: '资源从哪来', sec: 30, lines: [
-    '建造和修铁路要用{煤|coal}、{铁|iron}、{钢|steel}、{焦炭|coke}。它们只能沿火车线运，谁的火车都行，管道不行。',
-    '每个方块：先从{连通|connected}的产业板块上免费拿，谁的都行，能拿就必须拿；拿不到就去连通的{市场|market}按价买；还不行就找{范德比尔特|vanderbilt}，不用连通，但贵。',
-    '{石油|oil}也一样，只多一条：出{油田|oilfield}的第一步必须走{管道|pipe}。'
-  ], ask: ['消耗资源的优先顺序是什么？', '石油怎么运输？'] },
+  { title: '你的玩家板', sec: 35, lines: [
+    '玩家板上有五条产业轨道：{煤油精炼厂|kerosene}、{煤矿|coalmine}、{制成品|manuf}（往上是{汽车厂|auto}）、{焦炭厂|cokeoven}、{钢铁厂|ironsteel}。',
+    '每条轨道只能用最下面那块，或者顺着箭头的下一块；板块左上角是{等级|level}。',
+    '板块左边是费用。费用下面的{时代图标|era1}说明它只能在哪个时代建；画着{升级图标|upgrade}的，要替换你自己一个已翻面的产业。',
+    '轨道顶端有四种很强的{皇冠明珠产业|crown}：{石油城|oilcity}、{机车厂|loco}、{多相交流发电机|polyphase}和{摩天楼|skyscraper}。'
+  ], ask: ['能覆盖建造吗？「升级」怎么做？', '机车厂和摩天楼有什么效果？'] },
+  { title: '六种行动', sec: 70, lines: [
+    '**建造**：把产业板块放到地图上的{地点|location}，弃一张对应的地点牌或产业牌，付钱和{资源|cubes}。',
+    '**网络**：放一条{轻型火车|light}（1 煤）、{重型火车|heavy}（2 钢）或{管道|pipe}（1 铁）。重型火车建好就有奖励；每当有油流过你的管道，你也拿奖励。',
+    '**出售**：把煤油、制成品、汽车卖给{连通|connected}的{商人|merchant}，按板块右上角付{石油|oilreq}。正面朝上的商人还会给奖励。卖掉的板块翻面，拿右下角的{奖励|reward}。',
+    '出售时数一数卖掉的板块上有几颗{品质星|star}，够数就能拿一个{品质奖励|qreward}。',
+    '**发展**：花{铁|iron}或{钢|steel}，扔掉玩家板上一两块低级板块。',
+    '**贷款**：拿 30 元，收入降 3 级。',
+    '**过**：拿一瓶{威士忌|whiskey}。威士忌能把任意牌当万能牌用，或者出售时多算一颗品质星。'
+  ], ask: ['出售需要什么条件？', '品质奖励怎么领取？一次出售能领几个？', '替换火车、双倍火车、威士忌火车各有什么效果？'] },
+  { title: '资源和石油', sec: 40, lines: [
+    '{资源方块|cubes}有{煤|coal}、{铁|iron}、{钢|steel}、{焦炭|coke}四种，只能沿{连通|connected}的火车线运，谁的火车都行，管道不行。',
+    '煤矿、焦炭厂、钢铁厂建好时放上资源，能卖进连通的{市场|market}就先卖，卖一个拿一份钱和分。',
+    '要用资源时：先从连通的板块上免费拿，能拿就必须拿；不行就去连通的市场买；再不行找{范德比尔特|vanderbilt}，贵，但不用连通。板块上的资源被拿光，它就翻面。',
+    '{石油|oil}在{油田|oilfield}里，出油田的第一步必须走管道。第一个用管道连上油田的人把它翻开，拿奖励。'
+  ], ask: ['消耗资源的优先顺序是什么？', '石油怎么运输？', '管道连到油田时会发生什么？'] },
   { title: '时代结束', sec: 30, lines: [
     '牌堆摸完、大家手牌打光的那一轮结束，时代就结束。',
-    '计两项分：你的每条火车，两头地点上有几个{连线点|link}就得几分；每个{翻过面|flip}的产业板块按左下角得分，没翻面的不得分。',
-    '第一时代结束后：轻型火车拿回来，地图上的一级板块全部移走，弃牌重新洗好，每人再摸 8 张。',
+    '计两项分：你的每条火车，两头地点上有几个{连线点|link}就得几分；每个{翻过面|flip}的产业板块按左下角得分。',
+    '第一时代结束后：轻型火车拿回来，地图上的一级板块全部移走，弃牌洗好每人再摸 8 张。',
     '第二时代打完，{胜利点|vp}最多的人赢。好，开始吧！'
   ], ask: ['时代结束时按什么顺序计分？', '第1时代建的工业到第2时代还会再计分吗？'] }
 ];
 
-// Left out of the 3 minutes on purpose: ask when it comes up.
+// Fine rulings left out of the script: ask when they come up.
 const LATER = [
   ['收入的“格”和“等级”怎么算', '收入「等级」和「格」有什么区别？'],
-  ['什么是{升级|upgrade}，怎么建', '能覆盖建造吗？「升级」怎么做？'],
-  ['{第一时代|era1}、{第二时代|era2}图标限制什么', '地点里有多个空格时建在哪？时代图标是什么意思？'],
   ['第一时代一个地点能建几个产业', '第1时代一个地点能建几个工业？'],
-  ['重型火车有哪几种', '替换火车、双倍火车、威士忌火车各有什么效果？'],
-  ['管道有哪几种、谁拿奖励', '别人用我的管道运油，我有收益吗？储备管道是什么？'],
-  ['{品质星|star}和{品质奖励|qreward}', '品质奖励怎么领取？一次出售能领几个？'],
-  ['四种皇冠明珠产业', '机车厂和摩天楼有什么效果？'],
+  ['地点里有好几个空格，建哪个', '地点里有多个空格时建在哪？时代图标是什么意思？'],
   ['一次网络行动放两条链接', '网络行动的费用是多少？一次能建几条？'],
+  ['管道有哪几种、储备管道是什么', '别人用我的管道运油，我有收益吗？储备管道是什么？'],
+  ['产资源的产业会自动卖给市场吗', '建好产资源的工业后，资源会自动卖给市场吗？'],
   ['破产怎么办', '付不起负收入（破产）会怎样？'],
+  ['平局怎么算', '时代结束时按什么顺序计分？平局怎么算？'],
   ['2 人局有什么不同', '2人局有哪些不同？']
 ];
 
@@ -104,6 +117,7 @@ const GROUPS = [
   ['火车和管道', ['light', 'heavy', 'pipe']],
   ['版图', ['order', 'location', 'market', 'merchant', 'oilfield', 'vanderbilt']],
   ['产业种类', ['kerosene', 'manuf', 'auto', 'coalmine', 'cokeoven', 'ironsteel']],
+  ['皇冠明珠产业', ['oilcity', 'loco', 'polyphase', 'skyscraper']],
   ['其他', ['whiskey']]
 ];
 
@@ -114,9 +128,8 @@ const line = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\{([^|}
 const label = s => esc(s).replace(/\{([^|}]+)\|(\w+)\}/g, (_, t, id) => `<span class="tlab">${ICON(TERMS[id].icon)}${esc(t)}</span>`);
 const askBtn = (text, q) => `<button type="button" class="tq" data-q="${esc(q)}">问 <span>${label(text)}</span></button>`;
 
-const total = PARTS.reduce((n, p) => n + p.sec, 0);
 document.getElementById('teach').innerHTML = `
-  <p class="tlead">讲的人照着念就能开局，大约 ${Math.round(total / 60)} 分钟。<b>带下划线的词</b>点一下看图和解释；有疑问点「问」，规则助手马上回答。</p>
+  <p class="tlead">讲的人照着念，三四分钟就能开局。<b>带下划线的词</b>点一下看图和解释；有疑问点「问」，规则助手马上回答。</p>
   <nav class="tnav">${PARTS.map((p, i) => `<a href="#p${i + 1}"><i>${i + 1}</i>${p.title}</a>`).join('')}<a href="#later">遇到再说</a><a href="#icons">图标速查</a></nav>
   ${PARTS.map((p, i) => `<section class="card tpart" id="p${i + 1}">
     <h2 class="h"><span><i>${i + 1}</i>${p.title}</span><small>约 ${p.sec} 秒</small></h2>
@@ -131,7 +144,7 @@ document.getElementById('teach').innerHTML = `
   <a class="btn tgo" href="/">讲完了，去建房间</a>
   <h2 class="h" id="icons">图标速查<small>点图标看解释</small></h2>
   ${GROUPS.map(([g, ids]) => `<div class="card tgrid"><h3>${g}</h3><div>${ids.map(id => `<button type="button" class="tic" data-t="${id}">${ICON(TERMS[id].icon)}<span>${TERMS[id].name}</span></button>`).join('')}</div></div>`).join('')}
-  <footer>依据官方规则书 v2026.01 · 图标为本站简化重绘，以实物为准 · 非官方玩家工具</footer>`;
+  <footer>依据官方规则书 v2026.01 · 图片截自 Roxley 官方规则书（<a href="https://roxley.com/brass-pittsburgh-rulebook" target="_blank" rel="noopener">原文</a>），版权归 Roxley Games 所有 · 非官方玩家工具</footer>`;
 
 // The note for a term: a sheet from the bottom with the icon, where it is and what it means.
 const sheet = document.createElement('div');

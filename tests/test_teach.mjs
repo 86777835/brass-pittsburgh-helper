@@ -19,11 +19,14 @@ await page.goto(base); await page.waitForSelector('.teachgo');
 eq('landing shows the teach entry', (await page.textContent('.teachgo b')), '第一次玩？3 分钟讲规则');
 await page.click('.teachgo'); await page.waitForSelector('.tpart');
 eq('teach page opened', new URL(page.url()).pathname, '/teach');
-eq('five parts plus 遇到再说', await page.$$eval('.tpart h2', l => l.map(h => h.querySelector('span').textContent.replace(/^\S+?(?=[一-龥])/, ''))),
-  ['怎么赢', '一轮怎么走', '六种行动', '资源从哪来', '时代结束', '先别管，遇到再问']);
+eq('six parts plus 遇到再说', await page.$$eval('.tpart h2', l => l.map(h => h.querySelector('span').textContent.replace(/^\S+?(?=[一-龥])/, ''))),
+  ['怎么赢', '一轮怎么走', '你的玩家板', '六种行动', '资源和石油', '时代结束', '先别管，遇到再问']);
 const read = await page.$$eval('.tline', l => l.map(p => p.textContent).join(''));
 console.log(`  script: ${read.length} characters to read aloud`);
-eq('script about 3 minutes (under 1000 characters)', read.length < 1000, true);
+eq('script three to four minutes (under 1100 characters)', read.length < 1100, true);
+// every important element is at least named
+for (const w of ['品质星', '品质奖励', '威士忌', '升级图标', '皇冠明珠产业', '重型火车', '管道', '商人', '油田', '市场', '范德比尔特'])
+  if (!read.includes(w)) { fails++; console.log('FAIL script mentions', w); }
 await page.screenshot({ path: out + '/teach_top.png' });
 
 // every term in the script and every icon in the guide opens a note with a name, an icon and both texts
@@ -31,12 +34,12 @@ const ids = await page.$$eval('[data-t]', l => [...new Set(l.map(x => x.dataset.
 const bad = [];
 for (const id of ids) {
   await page.evaluate(id => document.querySelector(`[data-t="${id}"]`).click(), id);
-  const n = await page.$eval('.tsheet', s => ({ open: !s.classList.contains('hidden'), name: s.querySelector('.tshd b')?.textContent, icon: !!s.querySelector('.tshd svg path,.tshd svg circle,.tshd svg rect'), ps: [...s.querySelectorAll('p')].map(p => p.textContent.length) }));
+  const n = await page.$eval('.tsheet', s => ({ open: !s.classList.contains('hidden'), name: s.querySelector('.tshd b')?.textContent, icon: s.querySelector('.tshd img')?.complete !== false && !!s.querySelector('.tshd img'), ps: [...s.querySelectorAll('p')].map(p => p.textContent.length) }));
   if (!n.open || !n.name || !n.icon || n.ps.length !== 2 || n.ps.some(x => x < 8)) bad.push([id, n]);
   await page.click('.tsx');
 }
 console.log(`  ${ids.length} terms checked`);
-eq('every term opens a note with icon and text', bad, []);
+eq('every term opens a note with its picture and text', bad, []);
 eq('the note closes', await page.$eval('.tsheet', s => s.classList.contains('hidden')), true);
 const term = page.locator('.tpart .term').first();
 await term.scrollIntoViewIfNeeded(); await term.click();
@@ -57,9 +60,10 @@ eq('「问」 sends its question', [asked.at(-1), await page.$$eval('.cm.a', l =
 await page.click('.cx');
 eq('no button inside a button', await page.$$eval('button button', l => l.length), 0);
 
-// icon guide: every icon draws and has a name
-const tiles = await page.$$eval('.tic', l => l.map(t => [t.dataset.t, !!t.querySelector('svg *'), t.textContent.trim().length > 0]));
-eq('icon guide: every icon draws', tiles.filter(t => !t[1] || !t[2]), []);
+// icon guide: every picture loads and has a name
+await page.evaluate(() => Promise.all([...document.querySelectorAll('.tic img')].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; }))));
+const tiles = await page.$$eval('.tic', l => l.map(t => [t.dataset.t, t.querySelector('img')?.naturalWidth > 0, t.textContent.trim().length > 0]));
+eq('icon guide: every picture loads', tiles.filter(t => !t[1] || !t[2]), []);
 console.log(`  icon guide: ${tiles.length} icons`);
 await page.locator('#icons').scrollIntoViewIfNeeded(); await page.screenshot({ path: out + '/teach_icons.png' });
 
