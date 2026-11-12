@@ -19,8 +19,8 @@ await page.goto(base); await page.waitForSelector('.teachgo');
 eq('landing shows the teach entry', (await page.textContent('.teachgo b')), '第一次玩？3 分钟讲规则');
 await page.click('.teachgo'); await page.waitForSelector('.tpart');
 eq('teach page opened', new URL(page.url()).pathname, '/teach');
-eq('six parts plus 遇到再说', await page.$$eval('.tpart h2', l => l.map(h => h.querySelector('span').textContent.replace(/^\S+?(?=[一-龥])/, ''))),
-  ['怎么赢', '一轮怎么走', '你的玩家板', '六种行动', '资源和石油', '时代结束', '先别管，遇到再问']);
+eq('six parts plus 注意事项', await page.$$eval('.tpart h2', l => l.map(h => h.querySelector('span').textContent.replace(/^\S+?(?=[一-龥])/, ''))),
+  ['怎么赢', '一轮怎么走', '你的玩家板', '六种行动', '资源和石油', '时代结束', '注意事项']);
 const read = await page.$$eval('.tline', l => l.map(p => p.textContent).join(''));
 console.log(`  script: ${read.length} characters to read aloud`);
 eq('script three to four minutes (under 1100 characters)', read.length < 1100, true);
@@ -59,6 +59,18 @@ await page.locator('#p2 .tq').first().click(); await page.waitForFunction(n => d
 eq('「问」 sends its question', [asked.at(-1), await page.$$eval('.cm.a', l => l.at(-1).textContent)], [q, `答：${q}`]);
 await page.click('.cx');
 eq('no button inside a button', await page.$$eval('button button', l => l.length), 0);
+
+// 注意事项: every note has a title and a written answer, opens on tap, and its button asks about it
+const notes = await page.$$eval('.tni', l => l.map(d => ({ t: d.querySelector('summary').textContent, a: d.querySelector('p').textContent.length, q: d.querySelector('.tq').dataset.q, open: d.open })));
+console.log(`  ${notes.length} notes`);
+eq('at least 15 notes, each with an answer, all closed at first', [notes.length >= 15, notes.filter(n => n.a < 20 || !n.q || n.open)], [true, []]);
+const n1 = page.locator('.tni').first();
+await n1.locator('summary').click();
+eq('a note opens on tap', await n1.evaluate(d => d.open && d.querySelector('p').offsetHeight > 0), true);
+await page.screenshot({ path: out + '/teach_notes.png' });
+await n1.locator('.tq').click(); await page.waitForFunction(() => !document.querySelector('.cm.a:last-child .cdots'));
+eq('a note\'s button asks its question', asked.at(-1), notes[0].q);
+await page.click('.cx');
 
 // icon guide: every picture loads and has a name
 await page.evaluate(() => Promise.all([...document.querySelectorAll('.tic img')].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; }))));

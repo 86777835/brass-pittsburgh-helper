@@ -421,3 +421,13 @@ body.has-chat{padding-bottom:72px}
 .teachgo b{display:block;font:900 16px var(--serif);letter-spacing:1px;color:var(--red)}
 .teachgo span{flex:1;font:500 12.5px/1.5 var(--sans);color:var(--ink2)}
 .teachgo i{font:600 22px var(--sans);font-style:normal;color:var(--red)}
+/* teach page: 注意事项, one collapsible note per easy-to-miss rule, answer written in */
+.tnotes{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.tni{border:1px solid rgba(90,74,56,.25);border-radius:8px;background:#fffaf0}
+.tni summary{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 12px;font:700 15px/1.45 var(--sans);color:var(--ink);cursor:pointer;list-style:none}
+.tni summary::-webkit-details-marker{display:none}
+.tni summary::after{content:"＋";margin-left:auto;font-weight:500;color:var(--red)}
+.tni[open] summary::after{content:"－"}
+.tni summary i{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--red);color:#fff3d6;font:600 12px var(--num);font-style:normal}
+.tni p{margin:0 12px;padding-top:2px;font:500 15.5px/1.8 var(--sans);color:var(--ink)}
+.tni .tq{margin:8px 12px 12px;font-size:12.5px;min-height:30px}
