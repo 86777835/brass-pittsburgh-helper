@@ -134,6 +134,7 @@ python3 tools/build_guide.py tools/讲解稿.md public/guide.html tools/faq.json
 ```bash
 node tests/test_room.mjs    http://localhost:8799/ ./shots                # 双手机完整 16 轮
 node tests/test_room2.mjs   http://localhost:8799/ ./shots                # 4 人局、小屏、撤销、断线、平分、改名、长图等
+node tests/test_score_era.mjs http://localhost:8799/                     # 第二时代里补第一时代计分：填完一格不会跳到第二时代（两台手机）
 node tests/test_history.mjs http://localhost:8799/ ./shots --many-rooms   # 往期对局存档与搜索；房间多时首页按钮仍在首屏
 node tests/test_history.mjs https://你的域名/ ./shots --live              # 线上冒烟：打完一局再撤销，不留记录
 node tests/test_chat.mjs    http://localhost:8799/ ./shots --no-key       # 规则助手界面（未配置密钥时）

@@ -90,7 +90,8 @@ await A.click('[data-act="cell"][data-era="1"][data-id="yellow"][data-key="rail"
 const tot1 = await A.$$eval('td.tt', t => t.map(x => x.textContent));
 eq('era1 totals (order yellow? by current order)', tot1.length, 3);
 await shot(A, '06_score_era1');
-// era 2 on B: pre must be era1 total + mid
+// era 2 on B: pre must be era1 total + mid (B opened the tab on era 1, which stays put while A scores it)
+await B.click('[data-act="era"][data-era="2"]');
 await keyIn(B, 2, 'yellow', 'pre', ['4', '9', 'ok']);   // era1 yellow = 12+9+13 = 34 → mid 15
 await keyIn(B, 2, 'yellow', 'rail', ['8', '+', '9', 'ok']);
 await keyIn(B, 2, 'yellow', 'ind', ['1', '2', 'ok']);

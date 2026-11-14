@@ -257,7 +257,7 @@ function orderTab() {
 const era1Filled = () => Object.values(S.score[1] || {}).some(d => Object.values(d || {}).some(v => Array.isArray(v) ? v.length : v !== undefined && v !== ''));
 
 function scoreTab() {
-  const era = ui.era || (era1Filled() && (S.era === 2 || S.stage === 'over') ? 2 : 1);
+  const era = ui.era ||= era1Filled() && (S.era === 2 || S.stage === 'over') ? 2 : 1;   // picked once per visit, so entering a score doesn't switch era
   const keys = era === 1 ? ['pre', 'rail', 'ind', 'alt'] : ['pre', 'rail', 'ind', 'alt', 'loco'];
   const cell = (id, key) => {
     const d = (S.score[era][id] || {})[key];
@@ -511,7 +511,7 @@ document.addEventListener('click', e => {
     case 'move': flushAll(); send({ t: 'move', i: +d.i, j: +d.j }); break;
     case 'order': flushAll(); setTimeout(() => { location.href = orderUrl(S.n); }, 150); break;   // let the name edits reach the room first
     case 'start': flushAll(); send({ t: 'start' }); break;
-    case 'tab': ui.tab = d.tab; store.set('pgh-tab', d.tab); render(); window.scrollTo(0, 0); break;
+    case 'tab': if (ui.tab !== d.tab) ui.era = null; ui.tab = d.tab; store.set('pgh-tab', d.tab); render(); window.scrollTo(0, 0); break;
     case 'goto': ui.tab = d.tab; if (d.era) ui.era = +d.era; render(); window.scrollTo(0, 0); break;
     case 'era': ui.era = +d.era; render(); break;
     case 'tb': ui.tb = !ui.tb; render(); break;
