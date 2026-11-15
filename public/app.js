@@ -24,7 +24,7 @@ const store = {
 
 let code = cleanCode(new URLSearchParams(location.search).get('r'));
 let S = null, noRoom = false, online = false, ws = null, queue = [], retry = 0;
-const ui = { tab: store.get('pgh-tab') || 'order', era: null, sheet: null, err: '', busy: false, rooms: null, tb: false, rn: false, saving: false, rv: null };   // tb: tie-break inputs shown; rn: rename inputs shown on the results tab; rv: rating form (reviewCard)
+const ui = { tab: store.get('pgh-tab') || 'order', era: null, sheet: null, err: '', busy: false, rooms: null, tb: false, rn: false, saving: false, posting: false, rv: null };   // tb: tie-break inputs shown; rn: rename inputs shown on the results tab; rv: rating form (reviewCard)
 // This phone's spend entries for the current round; sent to the room only when settling.
 let draft = {}, draftKey = '';
 function syncDraft() {
@@ -293,6 +293,7 @@ function mvpTab() {
       <div class="pts">${champ.total}<small>分</small></div>
     </div>
     <div class="btns sv" data-html2canvas-ignore><button class="btn ghost" data-act="rn">${ui.rn ? '收起改名' : '修改玩家名'}</button><button class="btn navy" data-act="save" ${ui.saving ? 'disabled' : ''}>${ui.saving ? '正在生成…' : '保存结算长图'}</button></div>
+    <button class="btn" data-act="poster" data-html2canvas-ignore ${ui.posting ? 'disabled' : ''}>${ui.posting ? '正在生成海报…' : '打印海报（3 寸相纸）'}</button>
     ${ui.rn ? `<div class="card" data-k="rn" data-html2canvas-ignore style="margin-top:8px;padding:2px 10px 8px">${S.order.map(id => { const i = S.players.findIndex(p => p.id === id); return `<div class="tb">${por(id, 'xs')}<input class="pn" data-pk="name-${i}" data-name="${i}" value="${esc(P(id).name)}" placeholder="玩家名" maxlength="12" enterkeyhint="done"></div>`; }).join('')}</div>` : ''}
     ${tied.length ? `<div class="card" data-html2canvas-ignore style="margin-top:8px;padding:8px 10px"><button class="tbh" data-act="tb">同分：先比收入等级，再比现金<span>${ui.tb ? '收起' : '填写'}</span></button>
       ${!ui.tb ? '' : tied.map(r => `<div class="tb" data-k="tb-${r.id}">${por(r.id, 'xs')}<span style="flex:1">${esc(pname(r.id))}</span>收入<label class="field"><input type="text" inputmode="numeric" data-pk="sc-2-${r.id}-inc" data-sc="2:${r.id}:inc" value="${esc((S.score[2][r.id] || {}).inc ?? '')}" placeholder="0"></label>现金<label class="field"><i>$</i><input type="text" inputmode="numeric" data-pk="sc-2-${r.id}-cash" data-sc="2:${r.id}:cash" value="${esc((S.score[2][r.id] || {}).cash ?? '')}" placeholder="0"></label></div>`).join('')}</div>` : ''}
@@ -367,10 +368,28 @@ async function saveImage() {
   } catch (e) { toast('生成长图失败：' + e.message); }
   ui.saving = false; render();
 }
-function showImage(url) {
+// A 3-inch photo of the standings for the game wall (poster.js draws it).
+async function printPoster() {
+  ui.posting = true; render();
+  try {
+    const R = results(S), css = getComputedStyle(document.documentElement), first = R.rows.filter(r => r.place === 1);
+    const { drawPoster } = await import('./poster.js');
+    const url = await drawPoster({
+      title: '工业革命 · 匹兹堡', sub: `终局结算 · ${new Date().toLocaleDateString('zh-CN')} · 房间 ${code}`,
+      crown: first.length > 1 ? '并列第一' : 'MVP · 工业大亨', footer: '匹兹堡开局小助手 · pgh.leisurecat.cloud',
+      rows: R.rows.map(r => ({
+        place: r.place, name: pname(r.id), color: css.getPropertyValue('--' + r.id).trim(), img: `img/${P(r.id).fig}.jpg`, total: r.total,
+        parts: CATS.map(c => [c.n, r[c.k]]), medals: R.ach.filter(a => a.k !== 'mvp' && a.who.includes(r.id)).map(a => a.ch)
+      }))
+    });
+    showImage(url, '长按保存到相册，再用打印机 App 选 3 寸相纸打印', `匹兹堡海报-${code}.jpg`);
+  } catch (e) { toast('生成海报失败：' + e.message); }
+  ui.posting = false; render();
+}
+function showImage(url, tip = '长按图片保存到相册', file = `匹兹堡结算-${code}.jpg`) {
   const el = document.createElement('div');
   el.className = 'shotv';
-  el.innerHTML = `<div class="sv-top"><span>长按图片保存到相册</span><a href="${url}" download="匹兹堡结算-${code}.jpg">下载</a><button type="button">关闭</button></div><img src="${url}" alt="结算长图">`;
+  el.innerHTML = `<div class="sv-top"><span>${tip}</span><a href="${url}" download="${file}">下载</a><button type="button">关闭</button></div><img src="${url}" alt="结算长图">`;
   el.querySelector('button').onclick = () => el.remove();
   document.body.appendChild(el);
 }
@@ -517,6 +536,7 @@ document.addEventListener('click', e => {
     case 'tb': ui.tb = !ui.tb; render(); break;
     case 'rn': ui.rn = !ui.rn; render(); break;
     case 'save': if (!ui.saving) saveImage(); break;
+    case 'poster': if (!ui.posting) printPoster(); break;
     case 'rv-who': ui.rv.who = d.id; render(); break;
     case 'rv-star': ui.rv.stars = +d.n; render(); break;
     case 'rv-send': sendReview(); break;

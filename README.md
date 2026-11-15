@@ -47,6 +47,10 @@
 
 自动算出排名（同分先比收入等级、再比现金），展示 MVP、每人得分构成（行动分 / 铁路 / 产业 / 明珠）和 9 种趣味成就。终局时仍可修改玩家名，一键把整页结算生成长图，长按保存到相册。
 
+「打印海报（3 寸相纸）」生成一张 1200×1800 的竖版海报（2×3 英寸），用口袋照片打印机打出来贴桌游墙：版画风黄昏匹兹堡底图（Codex 生成的原创图，`public/img/poster-bg.jpg`），冠军大头像，所有玩家按名次列出头像、名字、总分、得分构成和成就章。画法在 `public/poster.js`（直接画 canvas，字号按打印尺寸定，最小 40 px）。
+
+<img src="docs/screenshots/poster.jpg" width="200" alt="打印海报">
+
 <p>
 <img src="docs/screenshots/results.jpg" width="260" alt="结算页">
 <img src="docs/screenshots/long.jpg" width="260" alt="结算长图">
@@ -135,6 +139,7 @@ python3 tools/build_guide.py tools/讲解稿.md public/guide.html tools/faq.json
 node tests/test_room.mjs    http://localhost:8799/ ./shots                # 双手机完整 16 轮
 node tests/test_room2.mjs   http://localhost:8799/ ./shots                # 4 人局、小屏、撤销、断线、平分、改名、长图等
 node tests/test_score_era.mjs http://localhost:8799/                     # 第二时代里补第一时代计分：填完一格不会跳到第二时代（两台手机）
+node tests/test_poster.mjs    http://localhost:8799/ ./shots                # 打印海报：2 人、4 人各打一局，海报 1200×1800（3 寸相纸），原图存到 shots/
 node tests/test_history.mjs http://localhost:8799/ ./shots --many-rooms   # 往期对局存档与搜索；房间多时首页按钮仍在首屏
 node tests/test_history.mjs https://你的域名/ ./shots --live              # 线上冒烟：打完一局再撤销，不留记录
 node tests/test_chat.mjs    http://localhost:8799/ ./shots --no-key       # 规则助手界面（未配置密钥时）
